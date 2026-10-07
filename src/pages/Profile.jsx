@@ -12,7 +12,7 @@ import { rupees, useStore } from '../store';
 const SECTIONS = [
   { id: 'account', label: 'Account & Channel', icon: UserRound },
   { id: 'billing', label: 'Plan & billing', icon: CreditCard },
-  { id: 'shorts', label: 'Your Shorts', icon: Clapperboard },
+  { id: 'shorts', label: 'Your videos', icon: Clapperboard },
   { id: 'schedule', label: 'Schedule', icon: CalendarClock },
   { id: 'settings', label: 'Video settings', icon: Settings2 },
 ];
@@ -370,8 +370,8 @@ function ShortsSection() {
   return (
     <section>
       <div className="toolbar">
-        <h2>Your Shorts</h2>
-        <Link to="/" className="btn ghost sm">New Short</Link>
+        <h2>Your videos</h2>
+        <Link to="/" className="btn ghost sm">New video</Link>
       </div>
       <div className="chips-row">
         {Object.keys(FILTERS).map((f) => (
@@ -382,7 +382,7 @@ function ShortsSection() {
       </div>
       {list.length === 0 ? (
         <div className="empty">
-          {jobs.length ? 'Nothing in this filter.' : <>No Shorts yet. <Link to="/" className="link">Pick a style</Link> to make one.</>}
+          {jobs.length ? 'Nothing in this filter.' : <>No videos yet. <Link to="/" className="link">Pick a style</Link> to make one.</>}
         </div>
       ) : (
         <div className="job-grid">
@@ -412,7 +412,7 @@ function SettingsSection() {
         <span className="card-icon"><Settings2 size={18} /></span>
         <div>
           <h2>Video settings</h2>
-          <p className="muted">Defaults for every new Short.</p>
+          <p className="muted">Defaults for every new Short. Long videos use the same timing for each design.</p>
         </div>
       </div>
       <div className="settings-grid">

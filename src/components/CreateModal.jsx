@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { CalendarClock, Crown, Loader2, Lock, Plus, Repeat, Wand2, X } from 'lucide-react';
+import { CalendarClock, Crown, Loader2, Lock, MonitorPlay, Plus, Repeat, Smartphone, Wand2, X } from 'lucide-react';
 import { api } from '../api';
 import { useStore } from '../store';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']; // ISO weekday 1..7
 const PRESETS = { 'Every day': [1, 2, 3, 4, 5, 6, 7], Weekdays: [1, 2, 3, 4, 5], Weekends: [6, 7] };
+const LONG_MINUTES = [1, 2, 3, 5, 10];
 
 // <input type="datetime-local"> wants local "YYYY-MM-DDTHH:mm"
 function toLocalInput(date) {
@@ -13,11 +14,15 @@ function toLocalInput(date) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-export default function CreateModal({ category, onClose }) {
+export default function CreateModal({ category, initialFormat = 'short', onClose }) {
   const { settings, loadJobs, notify, hasPlan, account } = useStore();
   const trialLeft = !hasPlan && account?.usage?.trialLeft > 0;
   const navigate = useNavigate();
   const [count, setCount] = useState(1);
+  const [format, setFormat] = useState(hasPlan ? initialFormat : 'short'); // 'short' (9:16) | 'long' (16:9, several designs)
+  const [minutes, setMinutes] = useState(3);
+  const [mix, setMix] = useState(false);
+  const long = format === 'long';
   const [privacy, setPrivacy] = useState(settings?.privacy || 'public');
   const [submitting, setSubmitting] = useState(false);
   const [when, setWhen] = useState('now'); // 'now' | 'once' | 'repeat'
@@ -49,6 +54,7 @@ export default function CreateModal({ category, onClose }) {
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       privacy,
       perSlot,
+      ...(long && { format, minutes, categories: mix ? [] : [category.id] }),
     });
     notify(`Autopilot on: ${category.name} ${days.length === 7 ? 'every day' : 'on your chosen days'}`);
     onClose();
@@ -57,9 +63,11 @@ export default function CreateModal({ category, onClose }) {
 
   const generate = async () => {
     const scheduledFor = when === 'once' ? new Date(publishAt).toISOString() : undefined;
-    const created = await api.createJobs({ category: category.id, count, privacy, scheduledFor });
-    const what = `${created.length} ${category.name} Short${created.length > 1 ? 's' : ''}`;
-    notify(scheduledFor ? `${what} scheduled for ${new Date(publishAt).toLocaleString()}` : `Creating ${what}. Upload it from Your Shorts when ready.`);
+    const created = await api.createJobs({
+      category: category.id, count, privacy, scheduledFor, ...(long && { format, minutes, mix }),
+    });
+    const what = `${created.length} ${category.name} ${long ? `${minutes}-minute video` : 'Short'}${created.length > 1 ? 's' : ''}`;
+    notify(scheduledFor ? `${what} scheduled for ${new Date(publishAt).toLocaleString()}` : `Creating ${what}. Upload it from Your videos when ready.`);
     loadJobs();
     onClose();
     navigate('/profile/shorts');
@@ -76,7 +84,7 @@ export default function CreateModal({ category, onClose }) {
     }
   };
 
-  const shorts = (n) => `${n > 1 ? `${n} Shorts` : 'Short'}`;
+  const shorts = (n) => (long ? `${n > 1 ? `${n} long videos` : 'long video'}` : `${n > 1 ? `${n} Shorts` : 'Short'}`);
   const label = when === 'repeat' ? 'Start autopilot' : when === 'once' ? `Schedule ${shorts(count)}` : `Create ${shorts(count)}`;
   const Icon = when === 'repeat' ? Repeat : when === 'once' ? CalendarClock : Wand2;
 
@@ -108,6 +116,43 @@ export default function CreateModal({ category, onClose }) {
           </div>
 
           <div className="field">
+            <span className="label">Format</span>
+            <div className="segmented">
+              <button type="button" className={!long ? 'on' : ''} onClick={() => setFormat('short')}>
+                <Smartphone size={14} /> Short · 9:16
+              </button>
+              <button type="button" className={long ? 'on' : ''} disabled={!hasPlan} title={hasPlan ? '' : 'Needs a plan'}
+                onClick={() => setFormat('long')}>
+                {!hasPlan && <Lock size={12} />}
+                <MonitorPlay size={14} /> Long video · 16:9
+              </button>
+            </div>
+            {long && (
+              <>
+                <div className="field two">
+                  <label>
+                    <span className="label">Length</span>
+                    <select value={minutes} onChange={(e) => setMinutes(Number(e.target.value))}>
+                      {LONG_MINUTES.map((m) => <option key={m} value={m}>{m} minute{m > 1 ? 's' : ''}</option>)}
+                    </select>
+                  </label>
+                  <label>
+                    <span className="label">Styles</span>
+                    <select value={mix ? 'mix' : 'one'} onChange={(e) => setMix(e.target.value === 'mix')}>
+                      <option value="one">Only {category.name}</option>
+                      <option value="mix">Mix of all styles</option>
+                    </select>
+                  </label>
+                </div>
+                <span className="hint">
+                  Designs are drawn one after another in a landscape video. Each one uses {minutes} of your monthly Shorts
+                  and takes much longer to render than a Short.
+                </span>
+              </>
+            )}
+          </div>
+
+          <div className="field">
             <span className="label">Publish</span>
             <div className="segmented three">
               <button type="button" className={when === 'now' ? 'on' : ''} onClick={() => setWhen('now')}>
@@ -117,7 +162,8 @@ export default function CreateModal({ category, onClose }) {
                 {!hasPlan && <Lock size={12} />}
                 <CalendarClock size={14} /> Once later
               </button>
-              <button type="button" className={when === 'repeat' ? 'on' : ''} disabled={!hasPlan} title={hasPlan ? '' : 'Needs a plan'} onClick={() => setWhen('repeat')}>
+              <button type="button" className={when === 'repeat' ? 'on' : ''} disabled={!hasPlan}
+                title={hasPlan ? '' : 'Needs a plan'} onClick={() => setWhen('repeat')}>
                 {!hasPlan && <Lock size={12} />}
                 <Repeat size={14} /> Repeat
               </button>
@@ -165,7 +211,7 @@ export default function CreateModal({ category, onClose }) {
                   )}
                 </div>
                 <span className="hint">
-                  A fresh {category.name} is made and uploaded automatically at each time
+                  A fresh {long ? `${minutes}-minute video` : category.name} is made and uploaded automatically at each time
                   ({Intl.DateTimeFormat().resolvedOptions().timeZone}). Manage it on the{' '}
                   <Link to="/profile/schedule" onClick={onClose} className="link">Schedule</Link> in Profile.
                 </span>
@@ -183,7 +229,7 @@ export default function CreateModal({ category, onClose }) {
               </select>
             </label>
             <label>
-              <span className="label">{when === 'repeat' ? 'Shorts each time' : 'How many'}</span>
+              <span className="label">{when !== 'repeat' ? 'How many' : long ? 'Long videos each time' : 'Shorts each time'}</span>
               <select value={when === 'repeat' ? perSlot : count} onChange={(e) => setCount(Number(e.target.value))}>
                 {(when === 'repeat' ? [1, 2, 3] : [1, 2, 3, 5, 10]).map((n) => <option key={n} value={n}>{n}</option>)}
               </select>
@@ -191,11 +237,11 @@ export default function CreateModal({ category, onClose }) {
           </div>
 
           {when === 'now' && (
-            <p className="hint">Creates the video only. Upload it from Your Shorts when you're happy with it.</p>
+            <p className="hint">Creates the video only. Upload it from Your videos when you're happy with it.</p>
           )}
           {when !== 'now' && !yt?.connected && (
             <p className="hint warn">
-              YouTube isn't connected. Videos will wait in Your Shorts until you <Link to="/profile/account" onClick={onClose} className="link">connect</Link>.
+              YouTube isn't connected. Videos will wait in Your videos until you <Link to="/profile/account" onClick={onClose} className="link">connect</Link>.
             </p>
           )}
 

@@ -13,6 +13,7 @@ const STATUS_LABEL = {
   failed: 'Failed',
 };
 const ACTIVE = new Set(['queued', 'rendering', 'encoding', 'uploading']);
+const clock = (s) => (s < 60 ? `${Math.round(s)}s` : `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`);
 
 export default function JobCard({ job, categoryName, onChanged, notify }) {
   const [hover, setHover] = useState(false);
@@ -20,6 +21,7 @@ export default function JobCard({ job, categoryName, onChanged, notify }) {
   const [draft, setDraft] = useState(null);
   const [confirmAgain, setConfirmAgain] = useState(false);
   const active = ACTIVE.has(job.status);
+  const long = job.format === 'long';
   // scheduled to go live later (held here, or uploaded with YouTube's publishAt)
   const pendingLive = Boolean(job.scheduledFor) && new Date(job.scheduledFor) > new Date();
 
@@ -49,7 +51,7 @@ export default function JobCard({ job, categoryName, onChanged, notify }) {
     }, 'Details saved');
 
   return (
-    <article className="job-card">
+    <article className={`job-card${long ? ' wide' : ''}`}>
       <div className="job-media" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
         {job.videoUrl && hover ? (
           <video src={job.videoUrl} poster={job.thumbnailUrl} autoPlay muted loop playsInline />
@@ -67,10 +69,11 @@ export default function JobCard({ job, categoryName, onChanged, notify }) {
 
       <div className="job-body">
         <div className="job-meta">
-          <span>{categoryName}</span>
+          <span>{long && job.mix ? 'Mixed styles' : categoryName}</span>
           {job.palette && <span>· {job.palette}</span>}
           {job.trial && <span className="trial-tag">Trial</span>}
-          {job.duration && <span>· {Math.round(job.duration)}s</span>}
+          {long && <span className="long-tag">Long</span>}
+          {job.duration ? <span>· {clock(job.duration)}</span> : long && <span>· {job.minutes} min</span>}
         </div>
 
         {active && (

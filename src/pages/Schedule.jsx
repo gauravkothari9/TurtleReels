@@ -76,18 +76,18 @@ export default function ScheduleSection() {
       <section className="section-hero">
         <div>
           <h2>Schedule</h2>
-          <p className="muted">Pick days and times. TurtleReels renders a fresh Short before each slot and publishes it on time.</p>
+          <p className="muted">Pick days and times. TurtleReels renders a fresh Short or long video before each slot and publishes it on time.</p>
         </div>
         <div className="stats">
           <div><strong>{schedules?.filter((s) => s.enabled).length ?? '–'}</strong><span>active</span></div>
-          <div><strong>{perWeek}</strong><span>Shorts / week</span></div>
+          <div><strong>{perWeek}</strong><span>videos / week</span></div>
           <div><strong>{schedules?.reduce((n, s) => n + s.published, 0) ?? '–'}</strong><span>published</span></div>
         </div>
       </section>
 
       {settings && !yt?.connected && (
         <div className="banner warn">
-          YouTube isn't connected, so scheduled Shorts will render but wait in Your Shorts.{' '}
+          YouTube isn't connected, so scheduled Shorts will render but wait in Your videos.{' '}
           <Link to="/profile/account" className="link">Connect your channel</Link>
         </div>
       )}
@@ -136,7 +136,7 @@ export default function ScheduleSection() {
                 </div>
 
                 <div className="schedule-meta">
-                  <span>{s.perSlot} per slot</span>
+                  <span>{s.format === 'long' ? `${s.minutes}-min long video · ` : ''}{s.perSlot} per slot</span>
                   <span>· {s.privacy}</span>
                   <span>· {s.published} published</span>
                   {s.enabled && s.nextRunAt && <span className="next">Next: {formatWhen(s.nextRunAt)}</span>}
@@ -145,7 +145,7 @@ export default function ScheduleSection() {
                 <div className="job-actions">
                   <button className="btn ghost sm" onClick={() => setEditing(s)}><Pencil size={14} /> Edit</button>
                   <button className="btn ghost sm" title="Make and publish one now"
-                    onClick={() => act(() => api.runSchedule(s.id), 'Rendering now. See Your Shorts.')}>
+                    onClick={() => act(() => api.runSchedule(s.id), 'Rendering now. See Your videos.')}>
                     <Play size={14} /> Run now
                   </button>
                   <button className="btn ghost sm icon danger" title="Delete schedule"
@@ -167,13 +167,13 @@ export default function ScheduleSection() {
               {upcoming.map((u) => (
                 <li key={`${u.scheduleId}-${u.at}`}>
                   <span className="when">{formatWhen(u.at)}</span>
-                  <span className="muted">{u.name}{u.perSlot > 1 ? ` · ${u.perSlot} Shorts` : ''}</span>
+                  <span className="muted">{u.name}{u.format === 'long' ? ' · long' : ''}{u.perSlot > 1 ? ` · ${u.perSlot} ${u.format === 'long' ? 'videos' : 'Shorts'}` : ''}</span>
                 </li>
               ))}
             </ol>
           )}
           <p className="hint">
-            Rendering starts 20 minutes before each slot. Public Shorts go live at the exact time through YouTube's
+            Rendering starts 20 minutes before each slot (earlier for long videos). Public videos go live at the exact time through YouTube's
             scheduler, even if this computer is off by then.
           </p>
         </aside>

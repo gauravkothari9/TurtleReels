@@ -139,6 +139,10 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 }
 .job-media { position: relative; aspect-ratio: 9 / 16; background: #07070b; }
 .job-media img, .job-media video { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* long (16:9) videos span two columns so they are about as tall as the Shorts beside them */
+.job-card.wide { grid-column: span 2; }
+.job-card.wide .job-media { aspect-ratio: 16 / 9; }
+.long-tag { padding: 0 6px; border-radius: 999px; font-size: 10.5px; font-weight: 700; background: rgba(139, 92, 246, .2); color: #c4b5fd; }
 .status {
   position: absolute; top: 10px; left: 10px; padding: 3px 9px; border-radius: 999px;
   font-size: 11px; font-weight: 700; background: rgba(0,0,0,.65); backdrop-filter: blur(4px);
@@ -406,6 +410,8 @@ input[type=time], input[type=datetime-local] {
 
 /* music */
 .segmented.three { grid-template-columns: repeat(3, 1fr); }
+.segmented.compact { display: inline-grid; flex-shrink: 0; }
+.segmented.compact button { padding: 6px 12px; font-size: 13px; white-space: nowrap; }
 .music-row { display: flex; align-items: flex-end; gap: 10px; }
 .music-row .grow { flex: 1; }
 .sample { display: flex; flex-direction: column; gap: 6px; }

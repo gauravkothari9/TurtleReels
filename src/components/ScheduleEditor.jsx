@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Loader2, Plus, Search, X } from 'lucide-react';
+import { Loader2, MonitorPlay, Plus, Search, Smartphone, X } from 'lucide-react';
 import { api } from '../api';
 import { useStore } from '../store';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']; // ISO weekday 1..7
 const PRESETS = { 'Every day': [1, 2, 3, 4, 5, 6, 7], Weekdays: [1, 2, 3, 4, 5], Weekends: [6, 7] };
+const LONG_MINUTES = [1, 2, 3, 5, 10];
 const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
 const allTimezones = (() => {
   try {
@@ -17,13 +18,14 @@ const allTimezones = (() => {
 export default function ScheduleEditor({ schedule, onClose, onSaved }) {
   const { categories, settings, notify } = useStore();
   const [form, setForm] = useState(() => schedule
-    ? { ...schedule }
+    ? { format: 'short', ...schedule, minutes: schedule.minutes || 3 }
     : { name: '', categories: [], days: [1, 3, 5], times: ['18:00'], timezone: browserTz,
-        privacy: settings?.privacy || 'public', perSlot: 1, enabled: true });
+        privacy: settings?.privacy || 'public', perSlot: 1, format: 'short', minutes: 3, enabled: true });
   const [anyStyle, setAnyStyle] = useState(!schedule?.categories?.length);
   const [query, setQuery] = useState('');
   const [saving, setSaving] = useState(false);
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
+  const long = form.format === 'long';
 
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose();
@@ -80,6 +82,18 @@ export default function ScheduleEditor({ schedule, onClose, onSaved }) {
           </label>
 
           <div className="field">
+            <span className="label">Format</span>
+            <div className="segmented">
+              <button type="button" className={!long ? 'on' : ''} onClick={() => set({ format: 'short' })}>
+                <Smartphone size={14} /> Shorts · 9:16
+              </button>
+              <button type="button" className={long ? 'on' : ''} onClick={() => set({ format: 'long' })}>
+                <MonitorPlay size={14} /> Long videos · 16:9
+              </button>
+            </div>
+          </div>
+
+          <div className="field">
             <span className="label">Days</span>
             <div className="day-picker">
               {DAYS.map((d, i) => (
@@ -132,12 +146,28 @@ export default function ScheduleEditor({ schedule, onClose, onSaved }) {
             </label>
           </div>
 
-          <label className="stack">
-            <span className="label">Shorts per slot</span>
-            <select value={form.perSlot} onChange={(e) => set({ perSlot: Number(e.target.value) })}>
-              {[1, 2, 3].map((n) => <option key={n} value={n}>{n}</option>)}
-            </select>
-          </label>
+          <div className={long ? 'field two' : 'field'}>
+            <label>
+              <span className="label">{long ? 'Long videos per slot' : 'Shorts per slot'}</span>
+              <select value={form.perSlot} onChange={(e) => set({ perSlot: Number(e.target.value) })}>
+                {[1, 2, 3].map((n) => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </label>
+            {long && (
+              <label>
+                <span className="label">Length of each</span>
+                <select value={form.minutes} onChange={(e) => set({ minutes: Number(e.target.value) })}>
+                  {LONG_MINUTES.map((m) => <option key={m} value={m}>{m} minute{m > 1 ? 's' : ''}</option>)}
+                </select>
+              </label>
+            )}
+          </div>
+          {long && (
+            <span className="hint">
+              Each slot uses {form.minutes * form.perSlot} of your monthly Shorts and starts rendering about{' '}
+              {20 + form.minutes * form.perSlot * 4} minutes early. Any style makes a mix; chosen styles take turns, one style per video.
+            </span>
+          )}
 
           <div className="field">
             <span className="label">Styles</span>
