@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { ChevronDown, CreditCard, Crown, LayoutGrid, LogOut, Sparkles, UserRound } from 'lucide-react';
+import { ChevronDown, CreditCard, Crown, LayoutGrid, LogOut, UserRound } from 'lucide-react';
 import { useStore } from '../store';
 import YoutubeIcon from './YoutubeIcon';
 
@@ -57,7 +57,7 @@ export default function Header() {
     <header className="topbar">
       <div className="topbar-left">
         <Link to="/" className="brand">
-          <span className="logo"><Sparkles size={18} /></span>
+          <span className="logo"><img src="/landing/logo-mark.png" alt="" width="30" height="30" /></span>
           TurtleReels
         </Link>
         {account && (

@@ -3,6 +3,7 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-
 import { Loader2 } from 'lucide-react';
 import { authEvents } from './api';
 import Header from './components/Header';
+import Landing from './landing/Landing';
 import { Login, Signup } from './pages/Auth';
 import Dashboard from './pages/Dashboard';
 import Pricing from './pages/Pricing';
@@ -24,8 +25,9 @@ function Protected({ children }) {
 }
 
 export default function App() {
-  const { toast, notify } = useStore();
+  const { toast, notify, account } = useStore();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   // Any request that needs a plan (402) lands the user on Pricing with the reason.
   useEffect(() => {
@@ -36,6 +38,19 @@ export default function App() {
     authEvents.addEventListener('paywall', onPaywall);
     return () => authEvents.removeEventListener('paywall', onPaywall);
   }, [navigate, notify]);
+
+  // Logged-out visitors to the home page get the public landing page instead of the login redirect.
+  // Log in, sign up and (logged out) pricing use the landing page's full-screen layout, without the app header.
+  const authPage = pathname === '/login' ? <Login /> : pathname === '/signup' ? <Signup />
+    : pathname === '/pricing' && account === null ? <Pricing standalone /> : null;
+  if ((pathname === '/' && account === null) || authPage) {
+    return (
+      <>
+        {authPage || <Landing />}
+        {toast && <div className={`toast ${toast.tone}`} role="status">{toast.text}</div>}
+      </>
+    );
+  }
 
   return (
     <div className="app">

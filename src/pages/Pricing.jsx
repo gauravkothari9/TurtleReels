@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Check, Loader2, Sparkles } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
 import { api, loadRazorpay } from '../api';
 import { rupees, useStore } from '../store';
+import { FREE_PLAN, PLAN_ROWS } from '../planRows';
+import { FALLBACK_PLANS, media, styles } from '../landing/data';
+import '../landing/landing.css';
+import './pricing.css';
 
 /** Opens Razorpay Checkout for a plan; resolves true once payment is verified by our server. */
 export function useCheckout() {
@@ -20,7 +24,7 @@ export function useCheckout() {
           name: order.name,
           description: order.description,
           prefill: { name: user?.name, email: user?.email },
-          theme: { color: '#8b5cf6' },
+          theme: { color: '#2fe3a4' },
           handler: async (resp) => {
             try {
               setAccount(await api.verifyPayment(resp));
@@ -46,85 +50,215 @@ export function useCheckout() {
   return { checkout, pending };
 }
 
-export default function Pricing() {
+/** "5 months free" when every plan's yearly price is a whole number of months cheaper, else the best % off. */
+function yearlySaving(plans) {
+  const ps = plans.filter((p) => p.monthly > 0 && p.yearly > 0);
+  if (!ps.length) return null;
+  const free = ps.map((p) => 12 - p.yearly / p.monthly);
+  if (free.every((f) => f <= 0)) return null;
+  const n = Math.round(free[0]);
+  if (n > 0 && free.every((f) => Math.abs(f - n) < 0.01)) return `${n} month${n === 1 ? '' : 's'} free`;
+  return `save up to ${Math.max(...ps.map((p) => Math.floor((1 - p.yearly / (p.monthly * 12)) * 100)))}%`;
+}
+
+/** Real previews of the styles each plan adds, in the same order the server unlocks them. */
+function Unlocks({ plans }) {
+  let from = 0;
+  const tiers = plans.map((p) => {
+    const to = Math.min(p.styles || styles.length, styles.length);
+    const added = styles.slice(from, to);
+    const row = { plan: p, added, total: to, first: from === 0 };
+    from = to;
+    return row;
+  }).filter((t) => t.added.length);
+  return (
+    <section className="pr-unlocks" aria-labelledby="pr-unlocks-h">
+      <h2 id="pr-unlocks-h">What each plan unlocks</h2>
+      {tiers.map(({ plan, added, total, first }) => {
+        const shown = added.slice(0, 6);
+        const more = added.length - shown.length;
+        return (
+          <div key={plan.id} className="pr-tier">
+            <div className="pr-tier-text">
+              <h3>{plan.name}</h3>
+              <p>{first ? `${added.length} styles to start` : `${added.length} more styles, ${total} in all`}</p>
+            </div>
+            <ul className="pr-tier-grid">
+              {shown.map((s, i) => {
+                const m = media(s.id);
+                return (
+                  <li key={s.id} className="lp-tile">
+                    {i === 0
+                      ? <video src={m.video} poster={m.poster} muted loop autoPlay playsInline aria-label={`${s.name} style drawing itself`} />
+                      : <img src={m.poster} alt={`${s.name} style, finished`} loading="lazy" width="360" height="640" />}
+                    <span>{s.name}</span>
+                  </li>
+                );
+              })}
+              {more > 0 && <li className="lp-tile pr-more"><span>+{more} more</span></li>}
+            </ul>
+          </div>
+        );
+      })}
+    </section>
+  );
+}
+
+function PricingTop({ account }) {
+  return (
+    <nav className="lp-top" aria-label="Main">
+      <Link to="/" className="lp-tile lp-logo" aria-label="TurtleReels home">
+        <img src="/landing/logo-mark.png" alt="" width="46" height="46" />
+      </Link>
+      <div className="lp-tile lp-links pr-links">
+        <Link to="/">Home</Link>
+        <Link to="/pricing" aria-current="page">Pricing</Link>
+        {!account && <Link to="/login" className="lp-login">Log in</Link>}
+      </div>
+      <Link to={account ? '/' : '/signup'} className="lp-tile lp-top-action">{account ? 'Dashboard' : 'Start free'}</Link>
+    </nav>
+  );
+}
+
+export default function Pricing({ standalone = false }) {
   const { account, hasPlan } = useStore();
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [period, setPeriod] = useState('monthly');
   const { checkout, pending } = useCheckout();
-  const current = account?.user?.subscription;
-  // Yearly saving from the live prices: "N months free" when every plan matches, else the best % off.
-  const yearlyLabel = (() => {
-    const ps = (data?.plans || []).filter((p) => p.monthly > 0 && p.yearly > 0);
-    if (!ps.length) return null;
-    const free = ps.map((p) => 12 - p.yearly / p.monthly);
-    if (free.every((f) => f <= 0)) return null;
-    const n = Math.round(free[0]);
-    if (free.every((f) => Math.abs(f - n) < 0.01) && n > 0) return `${n} month${n === 1 ? '' : 's'} free`;
-    return `save up to ${Math.max(...ps.map((p) => Math.floor((1 - p.yearly / (p.monthly * 12)) * 100)))}%`;
-  })();
+  const sub = account?.user?.subscription;
+  const isAdmin = account?.user?.role === 'admin';
+  const usage = account?.usage;
 
   useEffect(() => {
-    api.plans().then(setData).catch(() => setData({ plans: [], configured: false }));
+    api.plans().then(setData).catch(() => setData({ plans: FALLBACK_PLANS, configured: false, offline: true }));
   }, []);
+  useEffect(() => {
+    const prev = document.title;
+    document.title = 'Pricing · TurtleReels';
+    return () => { document.title = prev; };
+  }, []);
+
+  const plans = data?.plans?.length ? data.plans : FALLBACK_PLANS;
+  const cols = [FREE_PLAN, ...plans];
+  const saving = yearlySaving(plans);
+  const yearly = period === 'yearly';
+  const recommended = 'pro';
+  const currentId = isAdmin ? null : hasPlan ? sub?.plan : account ? 'free' : null;
 
   const choose = async (planId) => {
     if (!account) return navigate(`/signup?next=${encodeURIComponent('/pricing')}`);
     if (await checkout(planId, period)) navigate('/profile/billing');
   };
 
-  return (
-    <div className="pricing">
-      <section className="pricing-hero">
-        <span className="eyebrow"><Sparkles size={12} /> Plans</span>
-        <h1>Grow your channel on autopilot</h1>
-        <p className="muted">Registration is free and includes one trial Short. Pick a plan to upload to YouTube, schedule, and create more.</p>
-        <div className="segmented billing-toggle" role="tablist">
-          <button type="button" className={period === 'monthly' ? 'on' : ''} onClick={() => setPeriod('monthly')}>Monthly</button>
-          <button type="button" className={period === 'yearly' ? 'on' : ''} onClick={() => setPeriod('yearly')}>
-            Yearly {yearlyLabel && <span className="save">{yearlyLabel}</span>}
-          </button>
-        </div>
-      </section>
+  /** One button per plan, worded for who is looking. */
+  const action = (p, dark) => {
+    const cls = `lp-btn pr-btn${dark ? ' lp-btn-dark' : ''}`;
+    if (p.free) {
+      if (!account) return <Link to="/signup" className={cls}>Start free</Link>;
+      return <span className="pr-current">{currentId === 'free' ? 'Your plan' : 'Included'}</span>;
+    }
+    const isCurrent = hasPlan && sub?.plan === p.id && sub?.interval === period;
+    if (isCurrent) return <span className="pr-current">Current plan</span>;
+    if (isAdmin) return <span className="pr-current">Admin has full access</span>;
+    const busy = pending === `${p.id}:${period}`;
+    const blocked = Boolean(account) && data && !data.configured;
+    return (
+      <button type="button" className={cls} disabled={Boolean(pending) || blocked} onClick={() => choose(p.id)}>
+        {busy && <Loader2 className="spin" size={16} />}
+        {hasPlan ? `Switch to ${p.name}` : `Choose ${p.name}`}
+      </button>
+    );
+  };
 
-      {data && !data.configured && (
-        <div className="banner warn">Payments aren't switched on yet. Add Razorpay keys to <code>server/.env</code> to accept subscriptions.</div>
-      )}
+  const price = (p) => (p.free ? rupees(0) : rupees(yearly ? p.yearly : p.monthly));
+  const per = (p) => (p.free ? 'forever' : yearly ? `a year, ${rupees(Math.round(p.yearly / 12))} a month` : 'a month');
 
-      {!data ? (
-        <div className="empty"><Loader2 className="spin" size={22} /></div>
-      ) : (
-        <div className="plan-grid">
-          {data.plans.map((p) => {
-            const price = period === 'monthly' ? p.monthly : p.yearly;
-            const isCurrent = hasPlan && current?.plan === p.id && current?.interval === period;
-            const busy = pending === `${p.id}:${period}`;
-            return (
-              <article key={p.id} className={`plan-card${p.id === 'pro' ? ' featured' : ''}`}>
-                {p.id === 'pro' && <span className="plan-flag">Most popular</span>}
-                <h2>{p.name}</h2>
-                <div className="plan-price">
-                  <strong>{rupees(price)}</strong>
-                  <span className="muted">/{period === 'monthly' ? 'month' : 'year'}</span>
-                </div>
-                {period === 'yearly' && <span className="plan-sub muted">{rupees(Math.round(p.yearly / 12))}/month, billed yearly</span>}
-                <ul>
-                  {p.features.map((f) => <li key={f}><Check size={15} /> {f}</li>)}
-                </ul>
-                <button className={`btn ${p.id === 'pro' ? 'primary' : 'ghost'} block`} disabled={isCurrent || Boolean(pending) || !data.configured}
-                  onClick={() => choose(p.id)}>
-                  {busy && <Loader2 className="spin" size={15} />}
-                  {isCurrent ? 'Current plan' : hasPlan ? `Switch to ${p.name}` : `Choose ${p.name}`}
-                </button>
-              </article>
-            );
-          })}
+  const body = (
+    <div className={`lp pr ${standalone ? '' : 'pr-embedded'}`}>
+      {standalone && <PricingTop account={account} />}
+      <main className="pr-main">
+        <header className="pr-head">
+          <div>
+            <h1>Pick a TurtleReels plan</h1>
+            <p>Every paid plan uploads to YouTube automatically, with no watermark and original music. Prices in Indian rupees.</p>
+          </div>
+          <div className="pr-period" role="group" aria-label="Billing period">
+            <button type="button" aria-pressed={!yearly} onClick={() => setPeriod('monthly')}>Monthly</button>
+            <button type="button" aria-pressed={yearly} onClick={() => setPeriod('yearly')}>
+              Yearly{saving && <span>{saving}</span>}
+            </button>
+          </div>
+        </header>
+
+        {account && usage && !isAdmin && (
+          <p className="pr-status" role="status">
+            {hasPlan
+              ? <>You’re on <strong>{plans.find((p) => p.id === sub?.plan)?.name || 'a plan'}</strong>, billed {sub?.interval === 'yearly' ? 'yearly' : 'monthly'}. {usage.shortsLimit == null ? `${usage.shortsUsed} Shorts made this month.` : `${usage.shortsUsed} of ${usage.shortsLimit} Shorts used this month.`} <Link to="/profile/billing" className="lp-link">Manage billing</Link></>
+              : <>You’re on the free account. {usage.trialLeft ? 'Your trial Short is still waiting for you.' : 'Your trial Short is used.'} Pick a plan to upload and schedule.</>}
+          </p>
+        )}
+        {account && data && !data.configured && (
+          <p className="pr-warn" role="alert">Payments aren’t switched on yet, so plans can’t be bought right now.</p>
+        )}
+
+        <div className="lp-table-wrap pr-table">
+          <table className="lp-table">
+            <caption className="lp-sr">Plans compared</caption>
+            <thead>
+              <tr>
+                <th scope="col"><span className="lp-sr">Feature</span></th>
+                {cols.map((p) => (
+                  <th scope="col" key={p.id} className={p.id === recommended ? 'is-rec' : ''}>
+                    <span className="lp-plan">{p.name}</span>
+                    <span className="lp-price">{price(p)}</span>
+                    <span className="lp-period">{per(p)}</span>
+                    {currentId === p.id && <span className="pr-tag">Your plan</span>}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {PLAN_ROWS.map(([label, fn]) => (
+                <tr key={label}>
+                  <th scope="row">{label}</th>
+                  {cols.map((p) => <td key={p.id} className={p.id === recommended ? 'is-rec' : ''}>{fn(p)}</td>)}
+                </tr>
+              ))}
+              <tr className="lp-table-actions">
+                <th scope="row"><span className="lp-sr">Choose</span></th>
+                {cols.map((p) => <td key={p.id} className={p.id === recommended ? 'is-rec' : ''}>{action(p, p.id === recommended)}</td>)}
+              </tr>
+            </tbody>
+          </table>
         </div>
-      )}
-      <p className="hint center">
-        Prices in INR, taxes as applicable. Subscriptions renew automatically through Razorpay (UPI, cards, netbanking).
-        Cancel anytime; you keep access until the end of the paid period.
-      </p>
+
+        <div className="lp-plan-stack pr-stack">
+          {cols.map((p) => (
+            <article key={p.id} className={`lp-plan-block ${p.id === recommended ? 'is-rec' : ''}`}>
+              <h2>{p.name} <span>{price(p)}</span></h2>
+              <p className="pr-per">{per(p)}{currentId === p.id ? ' · your plan' : ''}</p>
+              <dl>
+                {PLAN_ROWS.map(([label, fn]) => <div key={label}><dt>{label}</dt><dd>{fn(p)}</dd></div>)}
+              </dl>
+              {action(p, p.id === recommended)}
+            </article>
+          ))}
+        </div>
+
+        <Unlocks plans={plans} />
+
+        <section className="pr-notes" aria-labelledby="pr-notes-h">
+          <h2 id="pr-notes-h">How billing works</h2>
+          <ul>
+            <li>Plans renew automatically through Razorpay: UPI, cards or netbanking. Taxes as applicable.</li>
+            <li>Change plan any time from Plan and billing. A cancelled plan keeps working until the paid period ends.</li>
+            <li>A long video uses one Short of your allowance per minute.</li>
+            <li>Basic unlocks the first 5 styles, Pro the first 30, Max all 52. The free trial Short can use any style.</li>
+          </ul>
+        </section>
+      </main>
     </div>
   );
+  return body;
 }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Loader2, MonitorPlay, Plus, Search, Smartphone, X } from 'lucide-react';
+import { Loader2, Lock, MonitorPlay, Plus, Search, Smartphone, X } from 'lucide-react';
 import { api } from '../api';
 import { useStore } from '../store';
 
@@ -16,7 +16,7 @@ const allTimezones = (() => {
 })();
 
 export default function ScheduleEditor({ schedule, onClose, onSaved }) {
-  const { categories, settings, notify } = useStore();
+  const { categories, settings, notify, canUseStyle } = useStore();
   const [form, setForm] = useState(() => schedule
     ? { format: 'short', ...schedule, minutes: schedule.minutes || 3 }
     : { name: '', categories: [], days: [1, 3, 5], times: ['18:00'], timezone: browserTz,
@@ -192,7 +192,8 @@ export default function ScheduleEditor({ schedule, onClose, onSaved }) {
                       <div className="row wrap">
                         {list.map((c) => (
                           <button key={c.id} type="button" className={`filter-chip${form.categories.includes(c.id) ? ' active' : ''}`}
-                            onClick={() => toggleCat(c.id)}>{c.name}</button>
+                            disabled={!canUseStyle(c.id)} title={canUseStyle(c.id) ? undefined : `On the ${({ basic: 'Basic', pro: 'Pro', max: 'Max' })[c.plan] || 'higher'} plan`}
+                            onClick={() => toggleCat(c.id)}>{!canUseStyle(c.id) && <Lock size={11} />}{c.name}</button>
                         ))}
                       </div>
                     </div>

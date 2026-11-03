@@ -7,7 +7,7 @@ import CreateModal from '../components/CreateModal';
 import { rupees, useStore } from '../store';
 
 export default function Dashboard() {
-  const { categories, jobs, loadJobs, notify, categoryNames, hasPlan, account } = useStore();
+  const { categories, jobs, loadJobs, notify, categoryNames, hasPlan, account, canUseStyle } = useStore();
   const [fromPrice, setFromPrice] = useState(null); // cheapest monthly plan, from the live plans
   useEffect(() => {
     if (!account || hasPlan) return;
@@ -114,7 +114,13 @@ export default function Dashboard() {
 
         {visible.length ? (
           <div className="category-grid">
-            {visible.map((c) => <CategoryCard key={c.id} category={c} onSelect={setSelected} />)}
+            {visible.map((c) => (
+              <CategoryCard key={c.id} category={c} locked={!canUseStyle(c.id)} onSelect={(cat) => {
+                if (canUseStyle(cat.id)) return setSelected(cat);
+                notify(`${cat.name} is on the ${({ basic: 'Basic', pro: 'Pro', max: 'Max' })[cat.plan] || 'higher'} plan. Upgrade to use it.`, 'error');
+                navigate('/pricing');
+              }} />
+            ))}
           </div>
         ) : (
           <div className="empty">No styles match “{query}”.</div>

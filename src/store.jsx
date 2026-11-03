@@ -82,6 +82,8 @@ export function StoreProvider({ children }) {
     hasPlan: Boolean(account?.access),
     categories, settings, setSettings, saveSettings, jobs, loadJobs, loadCategories, notify, toast,
     categoryNames: Object.fromEntries(categories.map((c) => [c.id, c.name])),
+    // Free accounts may use any style for their one trial Short; paid plans unlock a set number.
+    canUseStyle: (id) => !account?.access || !account?.usage?.allowedStyles || account.usage.allowedStyles.includes(id),
   }), [account, loadAccount, logout, categories, settings, saveSettings, jobs, loadJobs, loadCategories, notify, toast]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
