@@ -538,7 +538,7 @@ function Footer() {
       </div>
       <div className="lp-foot-cols">
         <div><h3>Product</h3><a href="#demo">Try the setup</a><a href="#styles">Styles</a><a href="#pricing">Pricing</a></div>
-        <div><h3>Help</h3><a href="#faq">Questions</a><Link to="/pricing">Plans and billing</Link></div>
+        <div><h3>Help</h3><a href="#faq">Questions</a><Link to="/pricing">Plans and billing</Link><Link to="/privacy">Privacy Policy</Link><Link to="/terms">Terms of Service</Link></div>
         <div><h3>Account</h3><Link to="/signup">Create account</Link><Link to="/login">Log in</Link></div>
         <div className="lp-foot-about">
           <p>Every design on this page was drawn by the TurtleReels engine with Python’s turtle graphics.</p>

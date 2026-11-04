@@ -5,6 +5,7 @@ import { authEvents } from './api';
 import Header from './components/Header';
 import Landing from './landing/Landing';
 import { Login, Signup } from './pages/Auth';
+import { Privacy, Terms } from './pages/Legal';
 import Dashboard from './pages/Dashboard';
 import Pricing from './pages/Pricing';
 import Profile from './pages/Profile';
@@ -41,7 +42,9 @@ export default function App() {
 
   // Logged-out visitors to the home page get the public landing page instead of the login redirect.
   // Log in, sign up and (logged out) pricing use the landing page's full-screen layout, without the app header.
+  // Privacy and Terms are public for everyone (Google OAuth review links to them).
   const authPage = pathname === '/login' ? <Login /> : pathname === '/signup' ? <Signup />
+    : pathname === '/privacy' ? <Privacy /> : pathname === '/terms' ? <Terms />
     : pathname === '/pricing' && account === null ? <Pricing standalone /> : null;
   if ((pathname === '/' && account === null) || authPage) {
     return (
