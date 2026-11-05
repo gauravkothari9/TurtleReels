@@ -131,6 +131,7 @@ export function UsersAdminSection() {
   const [data, setData] = useState(null);
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState('all');
+  const [saving, setSaving] = useState(null); // user id whose plan is being changed
 
   const load = useCallback((query) => {
     api.adminUsers(query).then(setData).catch((e) => notify(e.message, 'error'));
@@ -143,13 +144,27 @@ export function UsersAdminSection() {
   }, [q, load]);
 
   const planName = (id) => plans.find((p) => p.id === id)?.name || id;
+
+  /** Give a plan by hand (no billing), or '' for free. */
+  const changePlan = async (u, plan) => {
+    setSaving(u.id);
+    try {
+      const saved = await api.setUserPlan(u.id, plan || null);
+      setData((d) => ({ ...d, users: d.users.map((x) => (x.id === u.id ? { ...x, paid: saved.paid, subscription: { ...x.subscription, ...saved.subscription } } : x)) }));
+      notify(`${u.email} is now on ${plan ? planName(plan) : 'Free'}`);
+    } catch (e) {
+      notify(e.message, 'error');
+    } finally {
+      setSaving(null);
+    }
+  };
   const priceOf = (s) => {
     const p = plans.find((x) => x.id === s.plan);
     return p && s.interval ? `${rupees(s.interval === 'yearly' ? p.yearly : p.monthly)} / ${s.interval === 'yearly' ? 'yr' : 'mo'}` : '';
   };
   const users = data?.users || [];
   const list = users.filter(STATUS_FILTERS[filter]);
-  const mrr = users.filter((u) => u.paid && u.role !== 'admin' && !u.subscription.cancelAtPeriodEnd).reduce((sum, u) => {
+  const mrr = users.filter((u) => u.paid && u.role !== 'admin' && !u.subscription.manual && !u.subscription.cancelAtPeriodEnd).reduce((sum, u) => {
     const p = plans.find((x) => x.id === u.subscription.plan);
     if (!p) return sum;
     return sum + (u.subscription.interval === 'yearly' ? p.yearly / 12 : p.monthly);
@@ -196,9 +211,21 @@ export function UsersAdminSection() {
                 <div className="admin-user-plan">
                   <span className={`status-pill ${st.tone}`}>{st.text}</span>
                   {s.plan && u.role !== 'admin' && (
-                    <span className="admin-sm">{planName(s.plan)} · {s.interval} {priceOf(s) && <span className="muted">· {priceOf(s)}</span>}</span>
+                    <span className="admin-sm">
+                      {planName(s.plan)} · {s.manual ? 'given by admin' : <>{s.interval} {priceOf(s) && <span className="muted">· {priceOf(s)}</span>}</>}
+                    </span>
                   )}
-                  {s.plan && s.currentEnd && u.role !== 'admin' && (
+                  {u.role !== 'admin' && (
+                    <label className="admin-plan-pick">
+                      <select aria-label={`Plan for ${u.email}`} value={u.paid ? s.plan || '' : ''} disabled={u.billed || saving === u.id}
+                        title={u.billed ? 'Paid through Razorpay: the user changes plans from Plan and billing' : 'Give this user a plan without billing'}
+                        onChange={(e) => changePlan(u, e.target.value)}>
+                        <option value="">Free</option>
+                        {plans.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                      </select>
+                    </label>
+                  )}
+                  {s.plan && s.currentEnd && u.role !== 'admin' && !s.manual && (
                     <span className="muted admin-sm">
                       {s.cancelAtPeriodEnd || s.status === 'cancelled' ? 'Access until' : 'Renews'} {fmt(s.currentEnd)}
                     </span>

@@ -37,6 +37,7 @@ export const api = {
   adminPlans: () => request('GET', '/api/admin/plans'),
   savePlan: (id, plan) => request('PUT', `/api/admin/plans/${id}`, plan),
   adminUsers: (q = '') => request('GET', `/api/admin/users?q=${encodeURIComponent(q)}`),
+  setUserPlan: (id, plan) => request('PUT', `/api/admin/users/${id}/plan`, { plan }),
   // platform
   categories: () => request('GET', '/api/categories'),
   settings: () => request('GET', '/api/settings'),

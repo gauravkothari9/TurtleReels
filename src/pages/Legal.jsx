@@ -7,7 +7,7 @@ import './legal.css';
 // Edit these before publishing. Google's OAuth review checks that the contact works.
 const CONTACT_EMAIL = 'gauravkothari3789@gmail.com';
 const UPDATED = '4 November 2026';
-const SITE = 'https://turtlereels.vercel.app';
+const SITE = 'https://turtlereels.com';
 
 const Mail = () => <a className="lp-link" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>;
 const Ext = ({ href, children }) => <a className="lp-link" href={href} target="_blank" rel="noreferrer">{children}</a>;
