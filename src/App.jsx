@@ -3,7 +3,7 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-
 import { Loader2 } from 'lucide-react';
 import { authEvents } from './api';
 import Header from './components/Header';
-import Landing from './landing/Landing';
+import { FaqPage, Home, OutputPage, StylesPage } from './landing/Landing';
 import { Login, Signup } from './pages/Auth';
 import { Privacy, Terms } from './pages/Legal';
 import Dashboard from './pages/Dashboard';
@@ -42,14 +42,15 @@ export default function App() {
 
   // Logged-out visitors to the home page get the public landing page instead of the login redirect.
   // Log in, sign up and (logged out) pricing use the landing page's full-screen layout, without the app header.
-  // Privacy and Terms are public for everyone (Google OAuth review links to them).
+  // Public site pages (Output, Styles, FAQ, Privacy, Terms) open for everyone, logged in or not.
   const authPage = pathname === '/login' ? <Login /> : pathname === '/signup' ? <Signup />
     : pathname === '/privacy' ? <Privacy /> : pathname === '/terms' ? <Terms />
+    : pathname === '/styles' ? <StylesPage /> : pathname === '/output' ? <OutputPage /> : pathname === '/faq' ? <FaqPage />
     : pathname === '/pricing' && account === null ? <Pricing standalone /> : null;
   if ((pathname === '/' && account === null) || authPage) {
     return (
       <>
-        {authPage || <Landing />}
+        {authPage || <Home />}
         {toast && <div className={`toast ${toast.tone}`} role="status">{toast.text}</div>}
       </>
     );
@@ -65,6 +66,7 @@ export default function App() {
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/" element={<Protected><Dashboard /></Protected>} />
           <Route path="/schedule" element={<ScheduleRedirect />} />
+          <Route path="/how-it-works" element={<Navigate to="/output" replace />} />
           <Route path="/profile" element={<Navigate to="/profile/account" replace />} />
           <Route path="/profile/:section" element={<Protected><Profile /></Protected>} />
           <Route path="*" element={<Navigate to="/" replace />} />

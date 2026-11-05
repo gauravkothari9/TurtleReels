@@ -7,7 +7,6 @@ import { rupees, useStore } from '../store';
 
 const toForm = (p) => ({
   monthly: String(p.monthly),
-  yearly: String(p.yearly),
   shortsPerPeriod: String(p.shortsPerPeriod),
   schedules: p.schedules == null ? '' : String(p.schedules),
   features: p.features.join('\n'),
@@ -54,7 +53,6 @@ function PlanEditor({ plan, onSaved }) {
     try {
       const saved = await api.savePlan(plan.id, {
         monthly: Number(form.monthly),
-        yearly: Number(form.yearly),
         shortsPerPeriod: Number(form.shortsPerPeriod),
         schedules: form.schedules.trim() === '' ? null : Number(form.schedules),
         features: form.features.split('\n'),
@@ -69,25 +67,18 @@ function PlanEditor({ plan, onSaved }) {
     }
   };
 
-  const monthly = Number(form.monthly);
-  const yearly = Number(form.yearly);
-  const saving = monthly > 0 && yearly > 0 ? Math.round((1 - yearly / (monthly * 12)) * 100) : null;
 
   return (
     <section className="card">
       <form className="cred-form" onSubmit={save}>
         <div className="toolbar" style={{ marginBottom: 0 }}>
           <h2 className="toolbar-title">{plan.name}</h2>
-          <span className="muted">{rupees(plan.monthly)} / month · {rupees(plan.yearly)} / year</span>
+          <span className="muted">{rupees(plan.monthly)} / month</span>
         </div>
         <div className="settings-grid">
           <label className="stack">
             <span className="label">Monthly price (₹)</span>
             <input type="number" min={1} step={1} required inputMode="numeric" value={form.monthly} onChange={set('monthly')} />
-          </label>
-          <label className="stack">
-            <span className="label">Yearly price (₹){saving != null && saving > 0 ? ` · saves ${saving}%` : ''}</span>
-            <input type="number" min={1} step={1} required inputMode="numeric" value={form.yearly} onChange={set('yearly')} />
           </label>
           <label className="stack">
             <span className="label">Shorts per month</span>

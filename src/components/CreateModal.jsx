@@ -30,7 +30,9 @@ export default function CreateModal({ category, initialFormat = 'short', onClose
   const [days, setDays] = useState(PRESETS['Every day']);
   const [times, setTimes] = useState(['18:00']);
   const yt = settings?.youtube;
-  const perSlot = Math.min(count, 3);
+  // plan limits for autopilot (the server enforces the same)
+  const rules = account?.usage?.scheduleRules || { perSlot: 1, timesPerDay: 1, everyOtherDay: false };
+  const perSlot = Math.min(count, rules.perSlot);
 
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose();
@@ -47,7 +49,7 @@ export default function CreateModal({ category, initialFormat = 'short', onClose
   const startAutopilot = async () => {
     if (!days.length) return notify('Pick at least one day', 'error');
     await api.createSchedule({
-      name: `${category.name} · ${days.length === 7 ? 'daily' : days.map((d) => DAYS[d - 1]).join(' ')}`,
+      name: `${category.name} · ${rules.everyOtherDay ? 'every other day' : days.length === 7 ? 'daily' : days.map((d) => DAYS[d - 1]).join(' ')}`,
       categories: [category.id],
       days,
       times: times.filter(Boolean),
@@ -56,7 +58,7 @@ export default function CreateModal({ category, initialFormat = 'short', onClose
       perSlot,
       ...(long && { format, minutes, categories: mix ? [] : [category.id] }),
     });
-    notify(`Autopilot on: ${category.name} ${days.length === 7 ? 'every day' : 'on your chosen days'}`);
+    notify(`Autopilot on: ${category.name} ${rules.everyOtherDay ? 'every other day' : days.length === 7 ? 'every day' : 'on your chosen days'}`);
     onClose();
     navigate('/profile/schedule');
   };
@@ -179,6 +181,9 @@ export default function CreateModal({ category, initialFormat = 'short', onClose
 
             {when === 'repeat' && (
               <div className="repeat-box">
+                {rules.everyOtherDay ? (
+                  <span className="hint">Your plan posts every other day.</span>
+                ) : (<>
                 <div className="day-picker">
                   {DAYS.map((d, i) => (
                     <button key={d} type="button" className={days.includes(i + 1) ? 'on' : ''} aria-pressed={days.includes(i + 1)}
@@ -192,6 +197,7 @@ export default function CreateModal({ category, initialFormat = 'short', onClose
                       onClick={() => setDays(preset)}>{name}</button>
                   ))}
                 </div>
+                </>)}
                 <div className="time-list">
                   {times.map((t, i) => (
                     <span key={i} className="time-input">
@@ -204,7 +210,7 @@ export default function CreateModal({ category, initialFormat = 'short', onClose
                       )}
                     </span>
                   ))}
-                  {times.length < 6 && (
+                  {times.length < Math.min(6, rules.timesPerDay) && (
                     <button type="button" className="btn ghost sm" onClick={() => setTimes([...times, '12:00'])}>
                       <Plus size={14} /> Add time
                     </button>
@@ -231,7 +237,7 @@ export default function CreateModal({ category, initialFormat = 'short', onClose
             <label>
               <span className="label">{when !== 'repeat' ? 'How many' : long ? 'Long videos each time' : 'Shorts each time'}</span>
               <select value={when === 'repeat' ? perSlot : count} onChange={(e) => setCount(Number(e.target.value))}>
-                {(when === 'repeat' ? [1, 2, 3] : [1, 2, 3, 5, 10]).map((n) => <option key={n} value={n}>{n}</option>)}
+                {(when === 'repeat' ? Array.from({ length: rules.perSlot }, (_, i) => i + 1) : [1, 2, 3, 5, 10]).map((n) => <option key={n} value={n}>{n}</option>)}
               </select>
             </label>
           </div>

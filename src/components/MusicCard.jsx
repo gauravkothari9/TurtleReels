@@ -15,6 +15,7 @@ export default function MusicCard() {
   const { settings, saveSettings, notify, loadJobs } = useStore();
   const [tracks, setTracks] = useState([]);
   const [canUpload, setCanUpload] = useState(false);
+  const [trackLimit, setTrackLimit] = useState(null); // null = no cap
   const [sample, setSample] = useState(null);
   const [sampling, setSampling] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -24,7 +25,9 @@ export default function MusicCard() {
   const loadTracks = useCallback(() => api.musicTracks().then((d) => {
     setTracks(d.tracks);
     setCanUpload(d.canUpload);
+    setTrackLimit(d.trackLimit ?? null);
   }).catch(() => {}), []);
+  const full = trackLimit !== null && tracks.length >= trackLimit;
   const loadBackfill = useCallback(() => api.backfillStatus().then(setBackfill).catch(() => {}), []);
   useEffect(() => {
     loadTracks();
@@ -137,9 +140,16 @@ export default function MusicCard() {
           )}
           <input ref={fileRef} type="file" accept="audio/*" multiple hidden onChange={(e) => e.target.files.length && upload([...e.target.files])} />
           {canUpload ? (
-            <button type="button" className="btn ghost" disabled={uploading} onClick={() => fileRef.current?.click()}>
-              {uploading ? <Loader2 className="spin" size={15} /> : <Upload size={15} />} Upload tracks
-            </button>
+            <>
+              <button type="button" className="btn ghost" disabled={uploading || full} onClick={() => fileRef.current?.click()}>
+                {uploading ? <Loader2 className="spin" size={15} /> : <Upload size={15} />} Upload tracks
+              </button>
+              {trackLimit !== null && (
+                <span className="hint">
+                  {tracks.length} of {trackLimit} tracks used.{full && <> Delete one to add another, or move to <Link to="/pricing" className="link">Max</Link> for no limit.</>}
+                </span>
+              )}
+            </>
           ) : (
             <span className="hint">Uploading your own music is part of the <Link to="/pricing" className="link">Pro and Max plans</Link>.</span>
           )}

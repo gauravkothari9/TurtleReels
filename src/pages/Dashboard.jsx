@@ -5,6 +5,7 @@ import { Lock, MonitorPlay, Repeat, Search, Shuffle, Smartphone } from 'lucide-r
 import CategoryCard from '../components/CategoryCard';
 import CreateModal from '../components/CreateModal';
 import { rupees, useStore } from '../store';
+import { PLAN_NAMES } from '../planRows';
 
 export default function Dashboard() {
   const { categories, jobs, loadJobs, notify, categoryNames, hasPlan, account, canUseStyle } = useStore();
@@ -117,7 +118,7 @@ export default function Dashboard() {
             {visible.map((c) => (
               <CategoryCard key={c.id} category={c} locked={!canUseStyle(c.id)} onSelect={(cat) => {
                 if (canUseStyle(cat.id)) return setSelected(cat);
-                notify(`${cat.name} is on the ${({ basic: 'Basic', pro: 'Pro', max: 'Max' })[cat.plan] || 'higher'} plan. Upgrade to use it.`, 'error');
+                notify(`${cat.name} is on the ${PLAN_NAMES[cat.plan] || 'higher'} plan. Upgrade to use it.`, 'error');
                 navigate('/pricing');
               }} />
             ))}

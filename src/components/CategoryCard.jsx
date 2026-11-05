@@ -19,7 +19,7 @@ export default function CategoryCard({ category, onSelect, locked = false }) {
 
   return (
     <button type="button" className={`category-card${locked ? ' locked' : ''}`} onClick={() => onSelect(category)}
-      aria-label={locked ? `${category.name}, on the ${PLAN_NAMES[category.plan] || 'higher'} plan` : undefined}>
+      aria-label={locked ? `${category.name}, ${category.plan ? `on the ${PLAN_NAMES[category.plan]} plan` : 'not in any plan'}` : undefined}>
       <div className="category-media">
         {category.previewUrl ? (
           <video ref={videoRef} src={category.previewUrl} poster={category.posterUrl} muted loop playsInline preload="none" />
@@ -31,7 +31,7 @@ export default function CategoryCard({ category, onSelect, locked = false }) {
         )}
         <span className="group-badge">{category.group}</span>
         {category.published > 0 && <span className="count-badge">{category.published} published</span>}
-        {locked && <span className="lock-badge"><Lock size={12} /> {PLAN_NAMES[category.plan] || 'Upgrade'}</span>}
+        {locked && <span className="lock-badge"><Lock size={12} /> {PLAN_NAMES[category.plan] || 'Unavailable'}</span>}
       </div>
       <div className="category-body">
         <span className="category-name">{category.name}</span>

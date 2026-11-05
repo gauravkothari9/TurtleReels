@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { api } from '../api';
-import { FALLBACK_PLANS, FAQ, GROUPS, MOODS, QUOTES, buildTags, buildTitle, media, styles } from './data';
-import { FREE_PLAN, PLAN_NAMES, PLAN_ROWS } from '../planRows';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { GROUPS, FAQ, QUOTES, buildDescription, buildTags, buildTitle, media, styles } from './data';
+import { PLAN_NAMES } from '../planRows';
+import { useStore } from '../store';
 import './landing.css';
 
-const inr = (n) => '₹' + Number(n).toLocaleString('en-IN');
 
 /** Adds .is-in to every [data-reveal] block as it scrolls into view. Content stays visible without script. */
 function useReveal(root) {
@@ -61,32 +60,6 @@ function Loop({ src, poster, className = '', alt, eager }) {
   );
 }
 
-const NAV = [['demo', 'Try it'], ['styles', 'Styles'], ['pricing', 'Pricing'], ['faq', 'FAQ']];
-
-function TopRow() {
-  const [active, setActive] = useState('');
-  useEffect(() => {
-    if (!('IntersectionObserver' in window)) return undefined;
-    const io = new IntersectionObserver((entries) => {
-      entries.forEach((e) => { if (e.isIntersecting) setActive(e.target.id); });
-    }, { rootMargin: '-45% 0px -50% 0px' });
-    ['top', ...NAV.map(([id]) => id)].forEach((id) => { const n = document.getElementById(id); if (n) io.observe(n); });
-    return () => io.disconnect();
-  }, []);
-  return (
-    <nav className="lp-top" aria-label="Main">
-      <a href="#top" className="lp-tile lp-logo" aria-label="TurtleReels home"><img src="/landing/logo-mark.png" alt="" width="46" height="46" /></a>
-      <div className="lp-tile lp-links">
-        {NAV.map(([id, label]) => (
-          <a key={id} href={`#${id}`} aria-current={active === id ? 'location' : undefined}>{label}</a>
-        ))}
-        <Link to="/login" className="lp-login">Log in</Link>
-      </div>
-      <Link to="/signup" className="lp-tile lp-top-action">Start free</Link>
-    </nav>
-  );
-}
-
 function Hero() {
   const shutter = useRef(null);
   useEffect(() => {
@@ -122,356 +95,6 @@ function Hero() {
         </div>
       </div>
     </header>
-  );
-}
-
-function Demo({ styleId, setStyleId }) {
-  const [format, setFormat] = useState('short');
-  const [mood, setMood] = useState('dreamy');
-  const [drawSeconds, setDrawSeconds] = useState(20);
-  const [visibility, setVisibility] = useState('public');
-  const [time, setTime] = useState('18:00');
-  const [perSlot, setPerSlot] = useState(1);
-  const [minutes, setMinutes] = useState(3);
-  const [seed, setSeed] = useState(0);
-  const [playing, setPlaying] = useState(false);
-  const audio = useRef(null);
-
-  const style = styles.find((s) => s.id === styleId) || styles[0];
-  const idx = styles.indexOf(style);
-  const title = buildTitle(style, format, seed, minutes);
-  const { tags, chars } = useMemo(() => buildTags(style), [style]);
-  const quote = QUOTES[(seed + idx) % QUOTES.length];
-  const length = format === 'short' ? `${drawSeconds + 3} seconds` : `${minutes} minute${minutes > 1 ? 's' : ''}`;
-  const designs = format === 'long' ? Math.max(1, Math.round((minutes * 60) / (drawSeconds + 3))) : 1;
-  const renderLead = format === 'short' ? 20 : 20 + 4 * minutes;
-
-  const step = (d) => {
-    setStyleId(styles[(idx + d + styles.length) % styles.length].id);
-    setSeed((s) => s + 1);
-  };
-
-  const toggleMusic = () => {
-    const a = audio.current;
-    if (!a) return;
-    if (a.paused) a.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
-    else {
-      a.pause();
-      setPlaying(false);
-    }
-  };
-  useEffect(() => {
-    const a = audio.current;
-    if (a && playing) {
-      a.load();
-      a.play().catch(() => setPlaying(false));
-    }
-  }, [mood]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const m = media(style.id);
-  const publishNote = visibility === 'public'
-    ? `Uploaded as private, then YouTube makes it public at ${time} on the minute.`
-    : `Held on our server and uploaded as ${visibility} at ${time}.`;
-
-  return (
-    <section className="lp-section lp-demo" id="demo" aria-labelledby="demo-h">
-      <div className="lp-demo-head" data-reveal>
-        <h2 id="demo-h">Set up a Short</h2>
-        <p>Change any setting and the Short, its title and its upload plan change with it. This is what the platform sends to YouTube.</p>
-      </div>
-      <div className="lp-panel" data-reveal>
-        <div className={`lp-stage ${format}`}>
-          <div className="lp-frame">
-            <video key={style.id} src={m.video} poster={m.poster} muted loop autoPlay playsInline aria-label={`${style.name} style drawing itself`} />
-            <span className="lp-quote">“{quote}”</span>
-          </div>
-          <div className="lp-upload" data-ui>
-            <p className="lp-upload-title">{title}</p>
-            <dl>
-              <div><dt>Style</dt><dd>{style.name} · {style.group}</dd></div>
-              <div><dt>Length</dt><dd>{length}{format === 'long' ? `, ${designs} designs` : ''}</dd></div>
-              <div><dt>Music</dt><dd>Original {mood} track</dd></div>
-              <div><dt>Rendering starts</dt><dd>{renderLead} minutes before {time}</dd></div>
-              <div><dt>Publishing</dt><dd>{publishNote}</dd></div>
-            </dl>
-            <p className="lp-tags"><span>{chars} of 500 tag characters</span>{tags.slice(0, 9).join(', ')}…</p>
-          </div>
-        </div>
-        <div className="lp-controls" data-ui>
-          <div className="lp-row">
-            <label htmlFor="d-style">Style</label>
-            <div className="lp-stepper">
-              <button type="button" onClick={() => step(-1)} aria-label="Previous style">‹</button>
-              <select id="d-style" value={style.id} onChange={(e) => { setStyleId(e.target.value); setSeed((s) => s + 1); }}>
-                {GROUPS.map((g) => (
-                  <optgroup key={g} label={g}>
-                    {styles.filter((s) => s.group === g).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                  </optgroup>
-                ))}
-              </select>
-              <button type="button" onClick={() => step(1)} aria-label="Next style">›</button>
-            </div>
-          </div>
-          <div className="lp-row">
-            <span id="d-format">Format</span>
-            <div className="lp-seg" role="group" aria-labelledby="d-format">
-              <button type="button" aria-pressed={format === 'short'} onClick={() => setFormat('short')}>Short 9:16</button>
-              <button type="button" aria-pressed={format === 'long'} onClick={() => setFormat('long')}>Long 16:9</button>
-            </div>
-          </div>
-          {format === 'long' ? (
-            <div className="lp-row">
-              <label htmlFor="d-min">Length</label>
-              <select id="d-min" value={minutes} onChange={(e) => setMinutes(Number(e.target.value))}>
-                {[1, 2, 3, 5, 10].map((n) => <option key={n} value={n}>{n} min</option>)}
-              </select>
-            </div>
-          ) : null}
-          <div className="lp-row">
-            <label htmlFor="d-draw">Drawing time</label>
-            <div className="lp-range">
-              <input id="d-draw" type="range" min="10" max="40" step="5" value={drawSeconds} onChange={(e) => setDrawSeconds(Number(e.target.value))} />
-              <output htmlFor="d-draw">{drawSeconds}s</output>
-            </div>
-          </div>
-          <div className="lp-row lp-row-mood">
-            <span id="d-mood">Music</span>
-            <div className="lp-seg lp-seg-4" role="group" aria-labelledby="d-mood">
-              {MOODS.map((x) => (
-                <button key={x.id} type="button" aria-pressed={mood === x.id} onClick={() => setMood(x.id)}>{x.name}</button>
-              ))}
-            </div>
-            <button type="button" className="lp-play" onClick={toggleMusic} aria-pressed={playing}>
-              {playing ? 'Pause sample' : `Hear ${mood}`}
-            </button>
-            <audio ref={audio} src={`/landing/music/${mood}.mp3`} preload="none" onEnded={() => setPlaying(false)} />
-          </div>
-          <div className="lp-row">
-            <label htmlFor="d-vis">Visibility</label>
-            <select id="d-vis" value={visibility} onChange={(e) => setVisibility(e.target.value)}>
-              <option value="public">Public</option>
-              <option value="unlisted">Unlisted</option>
-              <option value="private">Private</option>
-            </select>
-          </div>
-          <div className="lp-row">
-            <label htmlFor="d-time">Publish at</label>
-            <input id="d-time" type="time" value={time} onChange={(e) => setTime(e.target.value || '18:00')} />
-          </div>
-          <div className="lp-row">
-            <span id="d-slot">Per slot</span>
-            <div className="lp-seg" role="group" aria-labelledby="d-slot">
-              {[1, 2, 3].map((n) => (
-                <button key={n} type="button" aria-pressed={perSlot === n} onClick={() => setPerSlot(n)}>{n}</button>
-              ))}
-            </div>
-          </div>
-          <div className="lp-controls-foot">
-            <button type="button" className="lp-link" onClick={() => setSeed((s) => s + 1)}>New title and quote</button>
-            <span>{perSlot * 7} Shorts a week at this pace</span>
-          </div>
-        </div>
-      </div>
-      <p className="lp-demo-after" data-reveal>
-        Ready to post it for real? <Link to="/signup" className="lp-link">Make your free trial Short</Link>
-      </p>
-    </section>
-  );
-}
-
-function Stages() {
-  const stages = [
-    { grow: 2, dur: 'Two minutes', text: 'First, sign in with Google and pick the channel to post to.', tone: 'paper' },
-    { grow: 1, dur: 'One minute', text: 'Then choose days, times, styles and how many Shorts per slot.', tone: 'plum' },
-    { grow: 20, dur: 'Twenty minutes before each slot', text: 'Next, the server draws, scores, titles and tags every Short ahead of time.', tone: 'surface' },
-    { grow: 1, dur: 'On the minute', text: 'Finally, YouTube publishes it at the exact time you set.', tone: 'accent' },
-  ];
-  return (
-    <section className="lp-section lp-stages" aria-labelledby="stages-h">
-      <h2 id="stages-h" data-reveal>Set it once, then wait</h2>
-      <ol className="lp-bar" data-ui data-reveal>
-        {stages.map((s, i) => (
-          <li key={s.dur} style={{ '--grow': s.grow, '--i': i }} className={`lp-seg-${s.tone}`}>
-            <div className="lp-bar-block"><span>{s.dur}</span></div>
-            <p>{s.text}</p>
-          </li>
-        ))}
-      </ol>
-    </section>
-  );
-}
-
-function Features() {
-  const [auto, setAuto] = useState(true);
-  return (
-    <section className="lp-section lp-features" aria-labelledby="features-h">
-      <div className="lp-mosaic">
-        <div className="lp-tile f-head" data-reveal><h2 id="features-h">What runs for you</h2></div>
-
-        <div className="lp-tile f-sched t-plum" data-reveal>
-          <div className="f-ui" data-ui aria-hidden="true"><span className="f-status">Scheduled</span><span className="f-when">Fri 18:00 IST</span></div>
-          <div className="f-cap"><h3>Exact-time publishing</h3><p>Public Shorts carry YouTube’s publish time, so they go live even while our server sleeps.</p></div>
-        </div>
-
-        <div className="lp-tile f-auto t-paper" data-reveal>
-          <button type="button" className="f-ui f-toggle" data-ui role="switch" aria-checked={auto} onClick={() => setAuto((a) => !a)} aria-label="Auto upload">
-            <span className="f-track"><span className="f-knob" /></span>
-          </button>
-          <div className="f-cap"><h3>Auto upload</h3><p>Finished Shorts go straight to your channel with title, description and tags filled in.</p></div>
-        </div>
-
-        <div className="lp-tile f-music t-surface" data-reveal>
-          <div className="f-ui f-keys" data-ui aria-hidden="true">{MOODS.map((x) => <kbd key={x.id}>{x.name}</kbd>)}</div>
-          <div className="f-cap"><h3>Original music</h3><p>A new track for every Short in one of four moods. Nothing for Content ID to claim.</p></div>
-        </div>
-
-        <div className="lp-tile f-long t-image" data-reveal>
-          <img src={media('torus_knot').poster} alt="Torus knot style, finished" loading="lazy" width="360" height="640" />
-          <div className="f-cap"><h3>Long videos</h3><p>One to ten minutes, 16:9, for the watch page.</p></div>
-        </div>
-
-        <div className="lp-tile f-tags t-paper" data-reveal>
-          <div className="f-ui f-figure" data-ui aria-hidden="true">480<small>/500</small></div>
-          <div className="f-cap"><h3>Tags that fit</h3><p>Your tags first, kept under YouTube’s limit.</p></div>
-        </div>
-
-        <div className="lp-tile f-slot t-surface" data-reveal>
-          <div className="f-ui f-slider" data-ui aria-hidden="true"><span className="f-rail"><span className="f-fill" /><span className="f-thumb" /></span><span>3 per slot</span></div>
-          <div className="f-cap"><h3>Up to three per slot</h3><p>Post more without more work.</p></div>
-        </div>
-
-        <div className="lp-tile f-quote t-plum" data-reveal>
-          <div className="f-ui f-chip" data-ui aria-hidden="true">“Nothing blooms in a hurry.”</div>
-          <div className="f-cap"><h3>A quote on every Short</h3><p>120 lines, never repeated recently.</p></div>
-        </div>
-
-        <div className="lp-tile f-catch t-surface" data-reveal>
-          <div className="f-ui f-figure" data-ui aria-hidden="true">+2<small>h</small></div>
-          <div className="f-cap"><h3>Missed-slot catch-up</h3><p>A slot missed by up to two hours still runs.</p></div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// Seven picks shown on the landing page, one or more from each family.
-const PICKS = ['fractal_spiral', 'mandala', 'chrysanthemum', 'phyllotaxis', 'torus_knot', 'barnsley_fern', 'flow_field'];
-
-/** Cheapest plan with this style: Basic unlocks the first 5, Pro the first 30, Max all (as the server does). */
-const tierOf = (id) => {
-  const i = styles.findIndex((s) => s.id === id);
-  return i < 5 ? 'basic' : i < 30 ? 'pro' : 'max';
-};
-
-function StyleWall({ onPick }) {
-  const list = PICKS.map((id) => styles.find((s) => s.id === id)).filter(Boolean);
-  const play = (e, on) => {
-    const v = e.currentTarget.querySelector('video');
-    if (!v) return;
-    if (on) v.play().catch(() => {});
-    else v.pause();
-  };
-  return (
-    <section className="lp-section lp-wall" id="styles" aria-labelledby="styles-h">
-      <div className="lp-wall-head" data-reveal>
-        <h2 id="styles-h">A few of the 52 styles</h2>
-        <p>Seven picks from six families: fractals, curves, symmetry, patterns, spirals and waves.</p>
-      </div>
-      <ul className="lp-wall-grid">
-        {list.map((s) => {
-          const m = media(s.id);
-          return (
-            <li key={s.id} data-reveal>
-              <button
-                type="button"
-                className="lp-style"
-                onMouseEnter={(e) => play(e, true)}
-                onMouseLeave={(e) => play(e, false)}
-                onFocus={(e) => play(e, true)}
-                onBlur={(e) => play(e, false)}
-                onClick={() => onPick(s.id)}
-                aria-label={`${s.name}: ${s.description} Load it in the setup above.`}
-              >
-                <img src={m.poster} alt="" loading="lazy" width="360" height="640" />
-                <video src={m.video} poster={m.poster} muted loop playsInline preload="none" aria-hidden="true" />
-                <span className="lp-style-name">{s.name}<small>{PLAN_NAMES[tierOf(s.id)]} plan</small></span>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-      <p className="lp-wall-foot" data-reveal>
-        All 52 are in the app. <Link to="/signup" className="lp-link">Make a free account to browse them</Link>
-      </p>
-    </section>
-  );
-}
-
-function Pricing() {
-  const [plans, setPlans] = useState(null);
-  useEffect(() => {
-    api.plans()
-      .then((d) => setPlans((d?.plans || []).filter((p) => p.monthly > 0).length ? d.plans.filter((p) => p.monthly > 0) : FALLBACK_PLANS))
-      .catch(() => setPlans(FALLBACK_PLANS));
-  }, []);
-  const list = plans || FALLBACK_PLANS;
-  const cols = [FREE_PLAN, ...list];
-  const recommended = list.find((p) => p.id === 'pro')?.id || list[Math.floor(list.length / 2)]?.id;
-  const rows = PLAN_ROWS;
-
-  return (
-    <section className="lp-section lp-pricing" id="pricing" aria-labelledby="pricing-h">
-      <div className="lp-table-wrap" data-reveal>
-        <table className="lp-table" style={{ '--cols': cols.length }}>
-          <thead>
-            <tr>
-              <th scope="col"><h2 id="pricing-h">Pick your pace</h2></th>
-              {cols.map((p) => (
-                <th scope="col" key={p.id} className={p.id === recommended ? 'is-rec' : ''}>
-                  <span className="lp-plan">{p.name}</span>
-                  <span className="lp-price">{p.free ? '₹0' : inr(p.monthly)}</span>
-                  <span className="lp-period">{p.free ? 'forever' : 'a month'}</span>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(([label, fn]) => (
-              <tr key={label}>
-                <th scope="row">{label}</th>
-                {cols.map((p) => <td key={p.id} className={p.id === recommended ? 'is-rec' : ''}>{fn(p)}</td>)}
-              </tr>
-            ))}
-            <tr className="lp-table-actions">
-              <th scope="row"><span className="lp-sr">Choose</span></th>
-              {cols.map((p) => (
-                <td key={p.id} className={p.id === recommended ? 'is-rec' : ''}>
-                  <Link to={p.free ? '/signup' : `/signup?next=${encodeURIComponent('/pricing')}`} className={`lp-btn ${p.id === recommended ? 'lp-btn-dark' : ''}`}>
-                    {p.free ? 'Start free' : `Choose ${p.name}`}
-                  </Link>
-                </td>
-              ))}
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div className="lp-plan-stack">
-        <h2>Pick your pace</h2>
-        {cols.map((p) => (
-          <article key={p.id} className={`lp-plan-block ${p.id === recommended ? 'is-rec' : ''}`} data-reveal>
-            <h3>{p.name} <span>{p.free ? '₹0' : `${inr(p.monthly)}/mo`}</span></h3>
-            <dl>
-              {rows.map(([label, fn]) => (
-                <div key={label}><dt>{label}</dt><dd>{fn(p)}</dd></div>
-              ))}
-            </dl>
-            <Link to="/signup" className={`lp-btn ${p.id === recommended ? 'lp-btn-dark' : ''}`}>{p.free ? 'Start free' : `Choose ${p.name}`}</Link>
-          </article>
-        ))}
-      </div>
-      <p className="lp-note" data-reveal>Prices in Indian rupees, billed through Razorpay. A year costs the same as five months.</p>
-    </section>
   );
 }
 
@@ -525,7 +148,7 @@ function Close() {
   );
 }
 
-function Footer() {
+export function Footer() {
   const letters = 'TURTLEREELS'.split('');
   const heights = [100, 78, 92, 66, 86, 72, 96, 70, 88, 62, 82];
   const tones = ['plum', 'paper', 'accent', 'surface', 'cyan', 'paper', 'surface', 'plum', 'yellow', 'surface', 'accent'];
@@ -537,8 +160,8 @@ function Footer() {
         ))}
       </div>
       <div className="lp-foot-cols">
-        <div><h3>Product</h3><a href="#demo">Try the setup</a><a href="#styles">Styles</a><a href="#pricing">Pricing</a></div>
-        <div><h3>Help</h3><a href="#faq">Questions</a><Link to="/pricing">Plans and billing</Link><Link to="/privacy">Privacy Policy</Link><Link to="/terms">Terms of Service</Link></div>
+        <div><h3>Product</h3><Link to="/output">Output</Link><Link to="/styles">Styles</Link><Link to="/pricing">Pricing</Link></div>
+        <div><h3>Help</h3><Link to="/faq">Questions</Link><Link to="/privacy">Privacy Policy</Link><Link to="/terms">Terms of Service</Link></div>
         <div><h3>Account</h3><Link to="/signup">Create account</Link><Link to="/login">Log in</Link></div>
         <div className="lp-foot-about">
           <p>Every design on this page was drawn by the TurtleReels engine with Python’s turtle graphics.</p>
@@ -547,40 +170,257 @@ function Footer() {
       </div>
       <div className="lp-foot-last">
         <span>© {new Date().getFullYear()} TurtleReels</span>
-        <a href="#top" className="lp-btn lp-btn-small">Back to top</a>
+        <button type="button" className="lp-btn lp-btn-small" onClick={() => window.scrollTo({ top: 0, behavior: reduceMotion() ? 'auto' : 'smooth' })}>Back to top</button>
       </div>
     </footer>
   );
 }
 
-export default function Landing() {
+const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- Shared shell: one nav and footer for every public page ---------- */
+
+const NAV = [['/', 'Home'], ['/output', 'Output'], ['/styles', 'Styles'], ['/pricing', 'Pricing'], ['/faq', 'FAQ']];
+
+export function SiteNav() {
+  const { pathname } = useLocation();
+  const { account } = useStore();
+  return (
+    <nav className="lp-top" aria-label="Main">
+      <Link to="/" className="lp-tile lp-logo" aria-label="TurtleReels home"><img src="/landing/logo-mark.png" alt="" width="46" height="46" /></Link>
+      <div className="lp-tile lp-links site-links">
+        {NAV.map(([to, label]) => (
+          <Link key={to} to={to} aria-current={pathname === to ? 'page' : undefined}>{label}</Link>
+        ))}
+        {!account && <Link to="/login" className="lp-login">Log in</Link>}
+      </div>
+      <Link to={account ? '/' : '/signup'} className="lp-tile lp-top-action">{account ? 'Dashboard' : 'Start free'}</Link>
+    </nav>
+  );
+}
+
+function SiteShell({ title, children }) {
   const root = useRef(null);
-  const [styleId, setStyleId] = useState('golden_spiral');
   useReveal(root);
   useOffscreenPause(root);
   useEffect(() => {
     const prev = document.title;
-    document.title = 'TurtleReels · YouTube Shorts on autopilot';
+    document.title = title;
+    window.scrollTo(0, 0);
     return () => { document.title = prev; };
-  }, []);
-  const pick = (id) => {
-    setStyleId(id);
-    document.getElementById('demo')?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
-  };
+  }, [title]);
   return (
     <div className="lp" ref={root}>
-      <TopRow />
-      <Hero />
-      <main className="lp-main">
-        <Demo styleId={styleId} setStyleId={setStyleId} />
-        <Stages />
-        <Features />
-        <StyleWall onPick={pick} />
-        <Pricing />
-        <Faq />
-        <Close />
-      </main>
+      <SiteNav />
+      {children}
       <Footer />
     </div>
   );
 }
+
+function PageHead({ title, lead, children }) {
+  return (
+    <header className="lp-page-head">
+      <div className="lp-tile lp-page-title">
+        <h1>{title}</h1>
+      </div>
+      <div className="lp-tile lp-page-lead">
+        <p>{lead}</p>
+        {children}
+      </div>
+    </header>
+  );
+}
+
+/* ---------- Home: what lands on the channel ---------- */
+
+// Finished Shorts: the video plus everything uploaded with it. Moods rotate through all four.
+const MOOD_NAMES = ['Calm', 'Dreamy', 'Cosmic', 'Upbeat'];
+const LENGTHS = [23, 28, 23, 33, 18, 28, 23, 38];
+const makeOutputs = (ids) => ids.map((id, i) => {
+  const style = styles.find((s) => s.id === id) || styles[i];
+  return {
+    style, seconds: LENGTHS[i % LENGTHS.length], mood: MOOD_NAMES[i % 4],
+    title: buildTitle(style, 'short', i), quote: QUOTES[(i * 5 + 2) % QUOTES.length],
+  };
+});
+const HOME_PICKS = ['mandala', 'chrysanthemum', 'torus_knot', 'golden_spiral'];
+const OUTPUT_PICKS = [...HOME_PICKS, 'fractal_tree', 'phyllotaxis', 'barnsley_fern', 'flow_field'];
+const HOME_OUTPUTS = makeOutputs(HOME_PICKS);
+
+function Output({ items, heading = true }) {
+  const [sel, setSel] = useState(0);
+  const pick = items[sel] || items[0];
+  const { tags, chars } = useMemo(() => buildTags(pick.style), [pick]);
+  const description = buildDescription(pick.style);
+  return (
+    <section className="lp-section lp-output" aria-labelledby="output-h">
+      <div className={`lp-demo-head ${heading ? '' : 'lp-sr'}`} data-reveal>
+        <h2 id="output-h">What lands on your channel</h2>
+        <p>These are finished uploads, not mock-ups. Each one has its own design, palette, quote and original track, plus a title, description and tags ready for YouTube.</p>
+      </div>
+
+      <ul className="lp-out-grid" aria-label="Finished Shorts">
+        {items.map((o, i) => {
+          const m = media(o.style.id);
+          return (
+            <li key={o.style.id} data-reveal>
+              <button type="button" className="lp-out-card" aria-pressed={sel === i} onClick={() => setSel(i)}>
+                <Loop src={m.video} poster={m.poster} alt={`Finished ${o.style.name} Short`} />
+                <span className="lp-quote">“{o.quote}”</span>
+                <span className="lp-out-meta">
+                  <strong>{o.title}</strong>
+                  <span>♪ Original {o.mood.toLowerCase()} track · 0:{String(o.seconds).padStart(2, '0')}</span>
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+
+      <div className="lp-out-row">
+        <article className="lp-tile lp-out-details" aria-live="polite" data-reveal>
+          <p className="lp-out-kicker">Uploaded with the {pick.style.name} Short</p>
+          <dl>
+            <div><dt>Title</dt><dd className="lp-out-title">{pick.title}</dd></div>
+            <div><dt>Description</dt><dd className="lp-out-desc">{description}</dd></div>
+            <div><dt>Tags · {chars} of 500 characters</dt><dd className="lp-out-tags">{tags.slice(0, 12).join(', ')}…</dd></div>
+            <div className="lp-out-facts">
+              <div><dt>Format</dt><dd>1080×1920, 30 fps</dd></div>
+              <div><dt>Length</dt><dd>{pick.seconds} seconds</dd></div>
+              <div><dt>Music</dt><dd>{pick.mood}, royalty-free</dd></div>
+            </div>
+          </dl>
+        </article>
+        <article className="lp-tile lp-out-long" data-reveal>
+          <figure>
+            <Loop src="/landing/long.mp4" poster="/landing/long.jpg" alt="Finished long video, designs drawn one after another" />
+          </figure>
+          <div className="lp-out-long-cap">
+            <p className="lp-out-kicker">Long video · 16:9</p>
+            <h3>3 Minutes of Satisfying Geometry Drawn by Python Turtle</h3>
+            <p>1920×1080 for the watch page. 1 to 10 minutes, a new design every 20 seconds or so, each with its own palette, quote and music.</p>
+          </div>
+        </article>
+      </div>
+      <p className="lp-demo-after" data-reveal>
+        Want one of these for your channel? <Link to="/signup" className="lp-link">Make your free trial Short</Link>
+      </p>
+    </section>
+  );
+}
+
+export function Home() {
+  return (
+    <SiteShell title="TurtleReels · YouTube Shorts on autopilot">
+      <Hero />
+      <main className="lp-main">
+        <Output items={HOME_OUTPUTS} />
+        <Close />
+      </main>
+    </SiteShell>
+  );
+}
+
+/* ---------- Styles: all 52 ---------- */
+
+/** Cheapest plan with this style: Basic unlocks the first 5, Pro the first 30, Max the first 50, Max+ all (as the server does). */
+const tierOf = (id) => {
+  const i = styles.findIndex((s) => s.id === id);
+  return i < 5 ? 'basic' : i < 30 ? 'pro' : i < 50 ? 'max' : 'maxplus';
+};
+
+function StyleGallery() {
+  const [group, setGroup] = useState('All');
+  const navigate = useNavigate();
+  const list = group === 'All' ? styles : styles.filter((s) => s.group === group);
+  const play = (e, on) => {
+    const v = e.currentTarget.querySelector('video');
+    if (!v) return;
+    if (on) v.play().catch(() => {});
+    else v.pause();
+  };
+  return (
+    <section className="lp-section lp-wall lp-gallery-section" aria-label="All styles">
+      <div className="lp-wall-head">
+        <div className="lp-filters" role="group" aria-label="Filter by family">
+          {['All', ...GROUPS].map((g) => (
+            <button key={g} type="button" aria-pressed={group === g} onClick={() => setGroup(g)}>
+              {g}<span>{g === 'All' ? styles.length : styles.filter((s) => s.group === g).length}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+      <ul className="lp-gallery">
+        {list.map((s) => {
+          const m = media(s.id);
+          return (
+            <li key={s.id}>
+              <button
+                type="button"
+                className="lp-style"
+                onMouseEnter={(e) => play(e, true)}
+                onMouseLeave={(e) => play(e, false)}
+                onFocus={(e) => play(e, true)}
+                onBlur={(e) => play(e, false)}
+                onClick={() => navigate(`/output?style=${s.id}`)}
+                aria-label={`${s.name}: ${s.description} See it as a finished Short.`}
+              >
+                <img src={m.poster} alt="" loading="lazy" width="360" height="640" />
+                <video src={m.video} poster={m.poster} muted loop playsInline preload="none" aria-hidden="true" />
+                <span className="lp-style-name">{s.name}<small>{PLAN_NAMES[tierOf(s.id)]} plan</small></span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+export function StylesPage() {
+  return (
+    <SiteShell title="Styles · TurtleReels">
+      <PageHead title="52 styles" lead="Six families: fractals, curves, symmetry, patterns, spirals and waves. Hover to watch one draw, click to see it as a finished Short. Every render is new, so two Shorts of the same style never match." />
+      <main className="lp-main">
+        <StyleGallery />
+        <Close />
+      </main>
+    </SiteShell>
+  );
+}
+
+/* ---------- Output: finished videos, no setup ---------- */
+
+export function OutputPage() {
+  const [params] = useSearchParams();
+  const wanted = params.get('style');
+  const ids = styles.some((s) => s.id === wanted) ? [wanted, ...OUTPUT_PICKS.filter((id) => id !== wanted)].slice(0, 8) : OUTPUT_PICKS;
+  const key = ids.join();
+  const items = useMemo(() => makeOutputs(key.split(',')), [key]);
+  return (
+    <SiteShell title="Output · TurtleReels">
+      <PageHead title="The output" lead="Finished Shorts and long videos exactly as they post to your channel: the video, its quote and music, and the title, description and tags that go with it." />
+      <main className="lp-main">
+        <Output key={key} items={items} heading={false} />
+        <Close />
+      </main>
+    </SiteShell>
+  );
+}
+
+/* ---------- FAQ ---------- */
+
+export function FaqPage() {
+  return (
+    <SiteShell title="FAQ · TurtleReels">
+      <PageHead title="Questions" lead="Music, scheduling, long videos, plans and cancelling. Still stuck? Email us from the address on the Privacy Policy." />
+      <main className="lp-main">
+        <Faq />
+        <Close />
+      </main>
+    </SiteShell>
+  );
+}
+
+export default Home;

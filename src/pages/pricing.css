@@ -27,7 +27,31 @@
 .lp .pr-warn { background: #3a2a05; color: #ffe7a3; }
 .pr-status .lp-link { margin-left: 6px; }
 
-.pr-table .lp-table thead th:first-child { width: 26%; }
+/* six plan columns: tighter type and padding than the landing table */
+.pr-table .lp-table { font-size: 16px; }
+.pr-table .lp-table th, .pr-table .lp-table td { padding: 14px 12px; }
+.pr-table .lp-table thead th:first-child { width: 16%; }
+.pr-table .lp-plan, .pr-table .lp-price { font-size: clamp(20px, 1.8vw, 30px); }
+.pr-table .lp-period { font-size: 14px; }
+/* too narrow for six columns: use the stacked cards */
+@media (max-width: 1100px) {
+  .pr-table.lp-table-wrap { display: none; }
+  .lp-plan-stack.pr-stack { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gap, 20px); }
+  .pr-stack .lp-plan-block { background: var(--surface); border-radius: var(--r); padding: 20px; }
+  .pr-stack .lp-plan-block.is-rec { background: var(--accent); color: var(--accent-ink); }
+  .pr-stack .lp-plan-block h2 { font-size: 30px; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .pr-stack .lp-plan-block h2 span { font-weight: 400; font-size: 22px; }
+  .pr-stack .lp-plan-block dl { margin: 16px 0 20px; display: grid; gap: 10px; }
+  .pr-stack .lp-plan-block dt { color: var(--muted); font-size: 15px; }
+  .pr-stack .lp-plan-block.is-rec dt { color: #0a3a2a; }
+  .pr-stack .lp-plan-block dd { margin: 0; font-size: 17px; }
+  .pr-stack .lp-plan-block .lp-btn { width: 100%; }
+  .lp .pr-per { margin-top: 6px; font-size: 15px; color: var(--muted); }
+  .lp .is-rec .pr-per { color: #0a3a2a; }
+}
+@media (max-width: 760px) {
+  .lp-plan-stack.pr-stack { grid-template-columns: 1fr; gap: 40px; }
+}
 .pr-tag { display: inline-block; margin-top: 10px; padding: 3px 10px; border-radius: 4px; font-size: 14px; font-weight: 600; background: var(--yellow); color: #1d1800; }
 .lp .pr-btn { width: 100%; gap: 8px; }
 .lp .pr-btn:disabled { opacity: 0.55; cursor: not-allowed; }

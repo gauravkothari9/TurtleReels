@@ -5,6 +5,7 @@ import { api, loadRazorpay } from '../api';
 import { rupees, useStore } from '../store';
 import { FREE_PLAN, PLAN_ROWS } from '../planRows';
 import { FALLBACK_PLANS, media, styles } from '../landing/data';
+import { Footer, SiteNav } from '../landing/Landing';
 import '../landing/landing.css';
 import './pricing.css';
 
@@ -50,17 +51,6 @@ export function useCheckout() {
   return { checkout, pending };
 }
 
-/** "5 months free" when every plan's yearly price is a whole number of months cheaper, else the best % off. */
-function yearlySaving(plans) {
-  const ps = plans.filter((p) => p.monthly > 0 && p.yearly > 0);
-  if (!ps.length) return null;
-  const free = ps.map((p) => 12 - p.yearly / p.monthly);
-  if (free.every((f) => f <= 0)) return null;
-  const n = Math.round(free[0]);
-  if (n > 0 && free.every((f) => Math.abs(f - n) < 0.01)) return `${n} month${n === 1 ? '' : 's'} free`;
-  return `save up to ${Math.max(...ps.map((p) => Math.floor((1 - p.yearly / (p.monthly * 12)) * 100)))}%`;
-}
-
 /** Real previews of the styles each plan adds, in the same order the server unlocks them. */
 function Unlocks({ plans }) {
   let from = 0;
@@ -104,27 +94,11 @@ function Unlocks({ plans }) {
   );
 }
 
-function PricingTop({ account }) {
-  return (
-    <nav className="lp-top" aria-label="Main">
-      <Link to="/" className="lp-tile lp-logo" aria-label="TurtleReels home">
-        <img src="/landing/logo-mark.png" alt="" width="46" height="46" />
-      </Link>
-      <div className="lp-tile lp-links pr-links">
-        <Link to="/">Home</Link>
-        <Link to="/pricing" aria-current="page">Pricing</Link>
-        {!account && <Link to="/login" className="lp-login">Log in</Link>}
-      </div>
-      <Link to={account ? '/' : '/signup'} className="lp-tile lp-top-action">{account ? 'Dashboard' : 'Start free'}</Link>
-    </nav>
-  );
-}
-
 export default function Pricing({ standalone = false }) {
   const { account, hasPlan } = useStore();
   const navigate = useNavigate();
   const [data, setData] = useState(null);
-  const [period, setPeriod] = useState('monthly');
+  const period = 'monthly'; // plans are billed monthly only
   const { checkout, pending } = useCheckout();
   const sub = account?.user?.subscription;
   const isAdmin = account?.user?.role === 'admin';
@@ -141,8 +115,6 @@ export default function Pricing({ standalone = false }) {
 
   const plans = data?.plans?.length ? data.plans : FALLBACK_PLANS;
   const cols = [FREE_PLAN, ...plans];
-  const saving = yearlySaving(plans);
-  const yearly = period === 'yearly';
   const recommended = 'pro';
   const currentId = isAdmin ? null : hasPlan ? sub?.plan : account ? 'free' : null;
 
@@ -158,7 +130,7 @@ export default function Pricing({ standalone = false }) {
       if (!account) return <Link to="/signup" className={cls}>Start free</Link>;
       return <span className="pr-current">{currentId === 'free' ? 'Your plan' : 'Included'}</span>;
     }
-    const isCurrent = hasPlan && sub?.plan === p.id && sub?.interval === period;
+    const isCurrent = hasPlan && sub?.plan === p.id;
     if (isCurrent) return <span className="pr-current">Current plan</span>;
     if (isAdmin) return <span className="pr-current">Admin has full access</span>;
     const busy = pending === `${p.id}:${period}`;
@@ -171,23 +143,17 @@ export default function Pricing({ standalone = false }) {
     );
   };
 
-  const price = (p) => (p.free ? rupees(0) : rupees(yearly ? p.yearly : p.monthly));
-  const per = (p) => (p.free ? 'forever' : yearly ? `a year, ${rupees(Math.round(p.yearly / 12))} a month` : 'a month');
+  const price = (p) => (p.free ? rupees(0) : rupees(p.monthly));
+  const per = (p) => (p.free ? 'forever' : 'a month');
 
   const body = (
     <div className={`lp pr ${standalone ? '' : 'pr-embedded'}`}>
-      {standalone && <PricingTop account={account} />}
+      {standalone && <SiteNav />}
       <main className="pr-main">
         <header className="pr-head">
           <div>
             <h1>Pick a TurtleReels plan</h1>
-            <p>Every paid plan uploads to YouTube automatically, with no watermark and original music. Prices in Indian rupees.</p>
-          </div>
-          <div className="pr-period" role="group" aria-label="Billing period">
-            <button type="button" aria-pressed={!yearly} onClick={() => setPeriod('monthly')}>Monthly</button>
-            <button type="button" aria-pressed={yearly} onClick={() => setPeriod('yearly')}>
-              Yearly{saving && <span>{saving}</span>}
-            </button>
+            <p>Every paid plan uploads to YouTube automatically, with no watermark and original music. Billed monthly in Indian rupees.</p>
           </div>
         </header>
 
@@ -254,10 +220,11 @@ export default function Pricing({ standalone = false }) {
             <li>Plans renew automatically through Razorpay: UPI, cards or netbanking. Taxes as applicable.</li>
             <li>Change plan any time from Plan and billing. A cancelled plan keeps working until the paid period ends.</li>
             <li>A long video uses one Short of your allowance per minute.</li>
-            <li>Basic unlocks the first 5 styles, Pro the first 30, Max all 52. The free trial Short can use any style.</li>
+            <li>Basic unlocks the first 5 styles, Pro the first 30, Max the first 50, Max+ and Ultra all 52. The free trial Short can use any style.</li>
           </ul>
         </section>
       </main>
+      {standalone && <Footer />}
     </div>
   );
   return body;

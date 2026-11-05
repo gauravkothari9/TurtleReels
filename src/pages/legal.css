@@ -1,5 +1,4 @@
 /* Privacy Policy and Terms of Service: one paper tile under the landing nav. */
-.lp-legal .legal-links { padding-left: 24px; }
 .lp main.legal-board { max-width: none; padding: 0; margin: var(--gap) 0 0; }
 .legal-doc {
   background: var(--paper); color: var(--paper-ink);
@@ -17,10 +16,3 @@
 .legal-doc code { font-size: 0.9em; background: var(--paper-2); padding: 1px 6px; border-radius: 4px; overflow-wrap: anywhere; }
 .legal-doc a { overflow-wrap: anywhere; }
 
-@media (max-width: 760px) {
-  .lp-legal .lp-top { grid-template-columns: 52px 1fr auto; }
-  .lp-legal .lp-top-action { display: grid; padding: 0 16px; font-size: 15px; }
-  .lp-legal .legal-links { padding-left: 16px; gap: 14px; }
-  .lp-legal .legal-links a { display: inline; }
-  .lp-legal .legal-links a:nth-child(2) { display: none; }
-}

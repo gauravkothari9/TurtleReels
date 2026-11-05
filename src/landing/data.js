@@ -63,9 +63,16 @@ export function buildTitle(style, format, seed, minutes) {
 
 // Fallback when the plans API is unreachable; the live page reads /api/billing/plans.
 export const FALLBACK_PLANS = [
-  { id: 'basic', name: 'Basic', monthly: 2000, yearly: 10000, shortsPerPeriod: 10, schedules: 1, styles: 5, totalStyles: 52, ownMusic: false, priority: false },
-  { id: 'pro', name: 'Pro', monthly: 3000, yearly: 15000, shortsPerPeriod: 30, schedules: 3, styles: 30, totalStyles: 52, ownMusic: true, priority: true },
-  { id: 'max', name: 'Max', monthly: 5000, yearly: 25000, shortsPerPeriod: 400, schedules: null, styles: 52, totalStyles: 52, ownMusic: true, priority: true },
+  { id: 'basic', name: 'Basic', monthly: 2000, yearly: 10000, shortsPerPeriod: 15, schedules: 1, perSlot: 1, everyOtherDay: true,
+    styles: 5, totalStyles: 52, ownMusic: false, musicTracks: 0, priority: false },
+  { id: 'pro', name: 'Pro', monthly: 3000, yearly: 15000, shortsPerPeriod: 270, schedules: 3, perSlot: 3, everyOtherDay: false,
+    styles: 30, totalStyles: 52, ownMusic: true, musicTracks: 2, priority: false },
+  { id: 'max', name: 'Max', monthly: 5000, yearly: 25000, shortsPerPeriod: 750, schedules: 5, perSlot: 5, everyOtherDay: false,
+    styles: 50, totalStyles: 52, ownMusic: true, musicTracks: null, priority: true },
+  { id: 'maxplus', name: 'Max+', monthly: 10000, yearly: 50000, shortsPerPeriod: 1680, schedules: 8, perSlot: 7, everyOtherDay: false,
+    styles: 52, totalStyles: 52, ownMusic: true, musicTracks: null, priority: true },
+  { id: 'ultra', name: 'Ultra', monthly: 15000, yearly: 75000, shortsPerPeriod: 3600, schedules: 12, perSlot: 10, everyOtherDay: false,
+    styles: 52, totalStyles: 52, ownMusic: true, musicTracks: null, priority: true },
 ];
 
 export const FAQ = [
@@ -91,7 +98,7 @@ export const FAQ = [
   },
   {
     q: 'Can I use my own music?',
-    a: 'On Pro and Max you can upload tracks you hold the rights to. Each Short then takes a random one from your library: short tracks loop and long ones are trimmed.',
+    a: 'On Pro you can upload 2 tracks you hold the rights to, and on Max as many as you like. Each Short then takes a random one from your library: short tracks loop and long ones are trimmed.',
   },
   {
     q: 'What does the free account include?',
@@ -102,3 +109,10 @@ export const FAQ = [
     a: 'Any time, from Plan & billing. A cancelled plan keeps working until the end of the period you paid for.',
   },
 ];
+
+// Same shape as the Short description in server/src/services/metadata.js (without the user's own footer and tags).
+export function buildDescription(style) {
+  const tag = (t) => '#' + t.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const hashtags = [...new Set(['#shorts', tag(style.hashtags[0] || style.name), '#python', '#satisfying'])];
+  return `${style.description} Every line in this ${style.name.toLowerCase()} was drawn by code using Python's turtle graphics library.\n\nFollow for a new geometric animation every day.\n\n${hashtags.join(' ')}`;
+}

@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { Footer, SiteNav } from '../landing/Landing';
 import '../landing/landing.css';
 import './legal.css';
 
@@ -11,7 +12,7 @@ const SITE = 'https://turtlereels.vercel.app';
 const Mail = () => <a className="lp-link" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>;
 const Ext = ({ href, children }) => <a className="lp-link" href={href} target="_blank" rel="noreferrer">{children}</a>;
 
-function LegalShell({ title, children, other }) {
+function LegalShell({ title, children }) {
   useEffect(() => {
     const prev = document.title;
     document.title = `${title} · TurtleReels`;
@@ -20,17 +21,7 @@ function LegalShell({ title, children, other }) {
   }, [title]);
   return (
     <div className="lp lp-legal">
-      <nav className="lp-top" aria-label="Main">
-        <Link to="/" className="lp-tile lp-logo" aria-label="TurtleReels home">
-          <img src="/landing/logo-mark.png" alt="" width="46" height="46" />
-        </Link>
-        <div className="lp-tile lp-links legal-links">
-          <Link to="/">Home</Link>
-          <Link to="/pricing">Pricing</Link>
-          <Link to={other.to}>{other.label}</Link>
-        </div>
-        <Link to="/signup" className="lp-tile lp-top-action">Sign up</Link>
-      </nav>
+      <SiteNav />
       <main className="legal-board">
         <article className="lp-tile legal-doc">
           <header>
@@ -40,13 +31,14 @@ function LegalShell({ title, children, other }) {
           {children}
         </article>
       </main>
+      <Footer />
     </div>
   );
 }
 
 export function Privacy() {
   return (
-    <LegalShell title="Privacy Policy" other={{ to: '/terms', label: 'Terms' }}>
+    <LegalShell title="Privacy Policy">
       <p>
         TurtleReels (“we”, “us”) is a web app that draws geometric videos with Python turtle graphics and,
         if you connect your YouTube channel, uploads them to that channel for you. This policy explains what
@@ -133,7 +125,7 @@ export function Privacy() {
 
 export function Terms() {
   return (
-    <LegalShell title="Terms of Service" other={{ to: '/privacy', label: 'Privacy' }}>
+    <LegalShell title="Terms of Service">
       <p>
         These terms are an agreement between you and TurtleReels for use of the website at {SITE.replace('https://', '')} and
         its services. By creating an account or using TurtleReels you accept these terms and
@@ -167,7 +159,7 @@ export function Terms() {
       <h2>4. Plans, payment and refunds</h2>
       <ul>
         <li>Registration is free and includes one watermarked trial video that cannot be uploaded.</li>
-        <li>Paid plans (Basic, Pro, Max) are subscriptions billed monthly or yearly in Indian rupees through Razorpay. Prices on the <Link className="lp-link" to="/pricing">Pricing</Link> page include any stated taxes.</li>
+        <li>Paid plans (Basic, Pro, Max, Max+, Ultra) are subscriptions billed monthly in Indian rupees through Razorpay. Prices on the <Link className="lp-link" to="/pricing">Pricing</Link> page include any stated taxes.</li>
         <li>Subscriptions renew automatically until cancelled. Cancel any time in Profile → Plan & billing; your plan keeps working until the end of the period you paid for.</li>
         <li>Monthly video allowances reset each billing period and do not carry over.</li>
         <li>Payments are non-refundable except where the law requires, or where a fault on our side stopped the service from working for most of a billing period. Email us within 7 days of a charge to ask.</li>

@@ -66,7 +66,7 @@ export default function ScheduleSection() {
   };
 
   const perWeek = useMemo(
-    () => (schedules || []).filter((s) => s.enabled).reduce((n, s) => n + s.days.length * s.times.length * s.perSlot, 0),
+    () => (schedules || []).filter((s) => s.enabled).reduce((n, s) => n + (s.everyOtherDay ? 3.5 : s.days.length) * s.times.length * s.perSlot, 0),
     [schedules],
   );
   const yt = settings?.youtube;
@@ -80,7 +80,7 @@ export default function ScheduleSection() {
         </div>
         <div className="stats">
           <div><strong>{schedules?.filter((s) => s.enabled).length ?? '–'}</strong><span>active</span></div>
-          <div><strong>{perWeek}</strong><span>videos / week</span></div>
+          <div><strong>{Math.round(perWeek)}</strong><span>videos / week</span></div>
           <div><strong>{schedules?.reduce((n, s) => n + s.published, 0) ?? '–'}</strong><span>published</span></div>
         </div>
       </section>
@@ -128,7 +128,7 @@ export default function ScheduleSection() {
 
                 <div className="day-dots">
                   {DAY_LABELS.map((d, i) => <span key={d} className={s.days.includes(i + 1) ? 'on' : ''}>{d[0]}</span>)}
-                  <span className="muted small">{describeDays(s.days)}</span>
+                  <span className="muted small">{s.everyOtherDay ? 'Every other day' : describeDays(s.days)}</span>
                 </div>
                 <div className="time-chips">
                   {s.times.map((t) => <span key={t} className="chip"><Clock size={11} /> {formatTime(t)}</span>)}

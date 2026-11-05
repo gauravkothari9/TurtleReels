@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Loader2, Lock, MonitorPlay, Plus, Search, Smartphone, X } from 'lucide-react';
 import { api } from '../api';
 import { useStore } from '../store';
+import { PLAN_NAMES } from '../planRows';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']; // ISO weekday 1..7
 const PRESETS = { 'Every day': [1, 2, 3, 4, 5, 6, 7], Weekdays: [1, 2, 3, 4, 5], Weekends: [6, 7] };
@@ -16,9 +17,12 @@ const allTimezones = (() => {
 })();
 
 export default function ScheduleEditor({ schedule, onClose, onSaved }) {
-  const { categories, settings, notify, canUseStyle } = useStore();
+  const { categories, settings, notify, canUseStyle, account } = useStore();
+  // plan limits for one schedule (the server enforces the same)
+  const rules = account?.usage?.scheduleRules || { perSlot: 1, timesPerDay: 1, everyOtherDay: false };
   const [form, setForm] = useState(() => schedule
-    ? { format: 'short', ...schedule, minutes: schedule.minutes || 3 }
+    ? { format: 'short', ...schedule, minutes: schedule.minutes || 3,
+        perSlot: Math.min(schedule.perSlot, rules.perSlot), times: schedule.times.slice(0, rules.timesPerDay) }
     : { name: '', categories: [], days: [1, 3, 5], times: ['18:00'], timezone: browserTz,
         privacy: settings?.privacy || 'public', perSlot: 1, format: 'short', minutes: 3, enabled: true });
   const [anyStyle, setAnyStyle] = useState(!schedule?.categories?.length);
@@ -93,6 +97,12 @@ export default function ScheduleEditor({ schedule, onClose, onSaved }) {
             </div>
           </div>
 
+          {rules.everyOtherDay ? (
+            <div className="field">
+              <span className="label">Days</span>
+              <span className="hint">Your plan posts every other day. Move to Pro or Max to post every day.</span>
+            </div>
+          ) : (
           <div className="field">
             <span className="label">Days</span>
             <div className="day-picker">
@@ -107,6 +117,7 @@ export default function ScheduleEditor({ schedule, onClose, onSaved }) {
               ))}
             </div>
           </div>
+          )}
 
           <div className="field">
             <span className="label">Times</span>
@@ -121,7 +132,7 @@ export default function ScheduleEditor({ schedule, onClose, onSaved }) {
                   )}
                 </span>
               ))}
-              {form.times.length < 12 && (
+              {form.times.length < rules.timesPerDay && (
                 <button type="button" className="btn ghost sm" onClick={() => set({ times: [...form.times, '12:00'] })}>
                   <Plus size={14} /> Add time
                 </button>
@@ -150,7 +161,7 @@ export default function ScheduleEditor({ schedule, onClose, onSaved }) {
             <label>
               <span className="label">{long ? 'Long videos per slot' : 'Shorts per slot'}</span>
               <select value={form.perSlot} onChange={(e) => set({ perSlot: Number(e.target.value) })}>
-                {[1, 2, 3].map((n) => <option key={n} value={n}>{n}</option>)}
+                {Array.from({ length: rules.perSlot }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}
               </select>
             </label>
             {long && (
@@ -192,7 +203,7 @@ export default function ScheduleEditor({ schedule, onClose, onSaved }) {
                       <div className="row wrap">
                         {list.map((c) => (
                           <button key={c.id} type="button" className={`filter-chip${form.categories.includes(c.id) ? ' active' : ''}`}
-                            disabled={!canUseStyle(c.id)} title={canUseStyle(c.id) ? undefined : `On the ${({ basic: 'Basic', pro: 'Pro', max: 'Max' })[c.plan] || 'higher'} plan`}
+                            disabled={!canUseStyle(c.id)} title={canUseStyle(c.id) ? undefined : `On the ${PLAN_NAMES[c.plan] || 'higher'} plan`}
                             onClick={() => toggleCat(c.id)}>{!canUseStyle(c.id) && <Lock size={11} />}{c.name}</button>
                         ))}
                       </div>
