@@ -12,6 +12,7 @@ export const PLAN_ROWS = [
   ['Shorts a month', (p) => (p.free ? 'One trial Short' : `${Number(p.shortsPerPeriod).toLocaleString('en-IN')} Shorts`)],
   ['Uploads', (p) => (p.free ? 'Not included' : p.everyOtherDay ? 'Every other day' : 'Every day')],
   ['Autopilot schedules', (p) => (p.free ? 'Not included' : p.schedules == null ? 'Unlimited' : `${p.schedules}`)],
+  ['Post times per schedule', (p) => (p.free ? 'Not included' : `${p.timesPerDay || 1}`)],
   ['Shorts per slot', (p) => (p.free ? 'Not included' : `${p.perSlot || 1}`)],
   ['Styles', (p) => (p.free ? `Browse all ${p.totalStyles || 52}` : stylesText(p))],
   ['Upload to YouTube', (p) => (p.free ? 'Not included' : 'Automatic')],

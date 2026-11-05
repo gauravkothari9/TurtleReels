@@ -63,15 +63,15 @@ export function buildTitle(style, format, seed, minutes) {
 
 // Fallback when the plans API is unreachable; the live page reads /api/billing/plans.
 export const FALLBACK_PLANS = [
-  { id: 'basic', name: 'Basic', monthly: 2000, yearly: 10000, shortsPerPeriod: 15, schedules: 1, perSlot: 1, everyOtherDay: true,
+  { id: 'basic', name: 'Basic', monthly: 2000, yearly: 10000, shortsPerPeriod: 15, schedules: 1, timesPerDay: 1, perSlot: 1, everyOtherDay: true,
     styles: 5, totalStyles: 52, ownMusic: false, musicTracks: 0, priority: false },
-  { id: 'pro', name: 'Pro', monthly: 3000, yearly: 15000, shortsPerPeriod: 270, schedules: 3, perSlot: 3, everyOtherDay: false,
+  { id: 'pro', name: 'Pro', monthly: 3000, yearly: 15000, shortsPerPeriod: 270, schedules: 3, timesPerDay: 3, perSlot: 3, everyOtherDay: false,
     styles: 30, totalStyles: 52, ownMusic: true, musicTracks: 2, priority: false },
-  { id: 'max', name: 'Max', monthly: 5000, yearly: 25000, shortsPerPeriod: 750, schedules: 5, perSlot: 5, everyOtherDay: false,
+  { id: 'max', name: 'Max', monthly: 5000, yearly: 25000, shortsPerPeriod: 750, schedules: 5, timesPerDay: 5, perSlot: 5, everyOtherDay: false,
     styles: 50, totalStyles: 52, ownMusic: true, musicTracks: null, priority: true },
-  { id: 'maxplus', name: 'Max+', monthly: 10000, yearly: 50000, shortsPerPeriod: 1680, schedules: 8, perSlot: 7, everyOtherDay: false,
+  { id: 'maxplus', name: 'Max+', monthly: 10000, yearly: 50000, shortsPerPeriod: 1680, schedules: 8, timesPerDay: 8, perSlot: 7, everyOtherDay: false,
     styles: 52, totalStyles: 52, ownMusic: true, musicTracks: null, priority: true },
-  { id: 'ultra', name: 'Ultra', monthly: 15000, yearly: 75000, shortsPerPeriod: 3600, schedules: 12, perSlot: 10, everyOtherDay: false,
+  { id: 'ultra', name: 'Ultra', monthly: 15000, yearly: 75000, shortsPerPeriod: 3600, schedules: 12, timesPerDay: 12, perSlot: 10, everyOtherDay: false,
     styles: 52, totalStyles: 52, ownMusic: true, musicTracks: null, priority: true },
 ];
 
